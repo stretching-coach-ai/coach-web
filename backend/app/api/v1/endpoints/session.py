@@ -1,30 +1,75 @@
 from uuid import uuid4
 from fastapi import APIRouter, Response, HTTPException
 from backend.app.services.temp_session_service import TempSessionService
+from backend.app.services.helpy_pro_service import HelpyProService
+from backend.app.schemas.user_input import UserInput
+from backend.app.schemas.ai_response import AIResponse
 
 router = APIRouter()
-temp_session_service = TempSessionService()
 
-@router.post("/start-session/")
-async def start_session(response: Response):
-    """비회원 세션 생성 API"""
+@router.post("/sessions/")
+async def create_session(response: Response):
+    """새로운 세션 생성"""
     session_id = str(uuid4())
+    await TempSessionService.create_session(session_id)
     response.set_cookie(key="session_id", value=session_id)
-    return {"session_id": session_id, "message": "Session started"}
+    return {"session_id": session_id, "message": "Session created successfully"}
 
-@router.post("/save-temp-data/")
-async def save_temp_data(session_id: str, data: dict):
-    """비회원 데이터를 저장하는 API"""
-    try:
-        await temp_session_service.create_temp_session(session_id, data)
-        return {"message": "Temporary data saved"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@router.get("/sessions/{session_id}")
+async def get_session(session_id: str):
+    """세션 정보 조회"""
+    session = await TempSessionService.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
 
-@router.get("/get-temp-data/{session_id}")
-async def get_temp_data(session_id: str):
-    """비회원 데이터 조회 API"""
-    data = await temp_session_service.get_temp_session(session_id)
-    if not data:
-        raise HTTPException(status_code=404, detail="No data found for this session")
-    return {"session_id": session_id, "data": data}
+@router.post("/sessions/{session_id}/stretching", response_model=AIResponse)
+async def create_stretching_session(
+    session_id: str,
+    user_input: UserInput
+):
+    """새로운 스트레칭 세션 생성 및 AI 가이드 생성"""
+    # 1. AI 가이드 생성
+    ai_response = await HelpyProService.generate_stretching_guide(
+        session_id=session_id,
+        user_input=user_input
+    )
+    
+    # 2. 세션에 스트레칭 기록 추가
+    updated_session = await TempSessionService.add_stretching_session(
+        session_id=session_id,
+        user_input=user_input
+    )
+    
+    if not updated_session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    # 3. 생성된 스트레칭 세션의 ID 찾기
+    latest_stretching = updated_session.stretching_sessions[-1]
+    
+    # 4. AI 응답 저장
+    await TempSessionService.update_stretching_ai_response(
+        session_id=session_id,
+        stretching_id=latest_stretching.id,
+        ai_response=ai_response.text
+    )
+    
+    return ai_response
+
+@router.post("/sessions/{session_id}/stretching/{stretching_id}/feedback")
+async def add_stretching_feedback(
+    session_id: str,
+    stretching_id: str,
+    feedback: str
+):
+    """스트레칭 세션에 대한 피드백 추가"""
+    updated_session = await TempSessionService.update_stretching_feedback(
+        session_id=session_id,
+        stretching_id=stretching_id,
+        feedback=feedback
+    )
+    
+    if not updated_session:
+        raise HTTPException(status_code=404, detail="Session or stretching session not found")
+    
+    return {"message": "Feedback added successfully"}
