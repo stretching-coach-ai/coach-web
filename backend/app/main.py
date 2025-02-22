@@ -3,6 +3,7 @@ from backend.app.core.config import settings
 from backend.app.core.database import MongoManager
 from backend.app.api.v1.endpoints.users import router as users_router
 from backend.app.api.v1.endpoints.session import router as session_router
+from backend.app.services.temp_session_service import TempSessionService
 
 # 환경 변수 로드
 from dotenv import load_dotenv
@@ -30,5 +31,9 @@ app.include_router(
     tags=["session"]
 )
 
-# ✅ 데이터베이스 초기화
-MongoManager.initialize_db()
+@app.on_event("startup")
+async def startup_event():
+    # ✅ 데이터베이스 초기화
+    MongoManager.initialize_db()
+    # ✅ MongoDB 인덱스 초기화
+    await TempSessionService.initialize_indexes()
