@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
 from .user_input import UserInput
@@ -7,7 +7,7 @@ class SessionBase(BaseModel):
     session_id: str = Field(..., description="세션 고유 식별자")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="세션 생성 시간")
     expires_at: datetime = Field(..., description="세션 만료 시간")
-    user_input: Optional[Dict[str, Any]] = Field(None, description="사용자 입력 데이터")
+    user_input: Optional[UserInput] = Field(None, description="사용자 입력 데이터")
     ai_response: Optional[str] = Field(None, description="AI 추천 응답 텍스트")
     feedback: Optional[str] = Field(None, description="사용자 피드백")
 
@@ -15,7 +15,7 @@ class SessionCreate(SessionBase):
     pass
 
 class SessionUpdate(BaseModel):
-    user_input: Optional[Dict[str, Any]] = None
+    user_input: Optional[UserInput] = None
     ai_response: Optional[str] = None
     feedback: Optional[str] = None
 
@@ -28,7 +28,7 @@ class SessionResponse(SessionBase):
                 "expires_at": "2024-02-23T10:00:00Z",
                 "user_input": {
                     "age": 28,
-                    "gender": "female",
+                    "gender": "여성",
                     "occupation": "사무직 회사원",
                     "lifestyle": {
                         "work_hours": 9,
