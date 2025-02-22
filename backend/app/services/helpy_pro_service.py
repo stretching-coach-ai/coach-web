@@ -11,41 +11,88 @@ class HelpyProService:
 
     API_URL = settings.HELPY_PRO_API_URL
     API_KEY = settings.HELPY_PRO_API_KEY
+    MAX_TOKENS = 2048
 
     @classmethod
-    async def generate_stretching_guide(cls, user_input: UserInput) -> AIResponse:
-        """사용자 입력을 기반으로 스트레칭 가이드 생성"""
-        
+    def _create_stretching_prompt(cls, user_input: UserInput) -> str:
+        """스트레칭 가이드 생성을 위한 프롬프트"""
+        return """아래 제공된 사용자 데이터를 기반으로 맞춤형 스트레칭 가이드를 제공해주세요.
+사용자의 직업, 생활패턴, 통증 정보를 종합적으로 분석하여 실질적인 도움이 되는 솔루션을 제시해주세요.
+
+1. 상태 분석
+- 생활습관과 통증의 상관관계
+- 주요 개선점
+- 위험 요소
+
+2. 맞춤형 스트레칭 프로그램
+- 준비 운동
+- 핵심 스트레칭 동작
+  * 동작 방법
+  * 시간/횟수
+  * 호흡법
+  * 주의사항
+- 마무리 운동
+
+3. 생활 습관 개선 가이드
+- 자세 교정법
+- 틈틈이 할 수 있는 운동
+- 장기적 관리 방법
+
+4. 주의사항
+- 피해야 할 동작
+- 통증 악화 시 대처법
+- 전문의 상담이 필요한 상황
+
+사용자 데이터:
+{user_input.json(indent=2)}
+
+전문적인 내용을 친근한 말투로 설명해주되, 구체적이고 실천 가능한 조언을 제공해주세요."""
+
+    @classmethod
+    async def generate_stretching_guide(
+        cls, 
+        session_id: str,
+        user_input: UserInput
+    ) -> AIResponse:
+        """스트레칭 가이드 생성"""
         headers = {
             "Authorization": f"Bearer {cls.API_KEY}",
-            "Content-Type": "application/json"
-        }
-        
-        # API 요청 데이터 구성
-        request_data = {
-            "user_data": {
-                "age": user_input.age,
-                "gender": user_input.gender,
-                "occupation": user_input.occupation,
-                "lifestyle": user_input.lifestyle.dict(),
-                "selected_body_parts": user_input.selected_body_parts,
-                "pain_level": user_input.pain_level,
-                "pain_description": user_input.pain_description
-            }
+            "Content-Type": "application/json",
+            "Accept": "application/json"
         }
 
-        # API 호출 및 응답 처리
+        request_data = {
+            "model": "helpy-v1",
+            "sess_id": session_id,
+            "max_tokens": cls.MAX_TOKENS,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": """당신은 전문 스트레칭 코치입니다. 
+사용자의 직업, 생활패턴, 통증 정보를 분석하여 맞춤형 솔루션을 제공합니다.
+전문적인 내용을 쉽고 친근하게 설명하되, 각 조언에 대한 이유와 기대 효과를 포함해주세요."""
+                },
+                {
+                    "role": "user",
+                    "content": cls._create_stretching_prompt(user_input)
+                }
+            ]
+        }
+
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{cls.API_URL}/generate",
+                    f"{cls.API_URL}/v1/chat/completions",
                     json=request_data,
                     headers=headers,
-                    timeout=None  
+                    timeout=None
                 )
                 
                 response.raise_for_status()
-                return AIResponse(text=response.json()["response"])
+                response_data = response.json()
+                ai_response = response_data["choices"][0]["message"]["content"]
+                
+                return AIResponse(text=ai_response)
                 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
