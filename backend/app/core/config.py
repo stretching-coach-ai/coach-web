@@ -16,9 +16,20 @@ class Settings(BaseSettings):
     PORT: int = int(os.getenv("PORT", 8000))
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-super-secret-key")
 
+    # MongoDB Configuration
     MONGODB_URL: str = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
-    MONGODB_DB_NAME: str = os.getenv("MONGODB_DB_NAME", "stretching_coach")
+    MONGODB_DB_NAME: str = os.getenv("MONGODB_DB_NAME", "stretch_ai_db")
     MONGODB_INIT_MODE: str = os.getenv("MONGODB_INIT_MODE", "none")
+
+    # Helpy Pro API Configuration
+    HELPY_PRO_API_URL: str = os.getenv("HELPY_PRO_API_URL", "https://api-cloud-function.elice.io/8d0fbc41-2edd-4525-8af7-25a6f429ad11")
+    HELPY_PRO_API_KEY: str = os.getenv("HELPY_PRO_API_KEY", "")
+
+    # Session Configuration
+    SESSION_EXPIRY_HOURS: int = int(os.getenv("SESSION_EXPIRY_HOURS", "24"))
+    
+    class Config:
+        case_sensitive = True
 
 @lru_cache()
 def get_settings():
@@ -32,3 +43,5 @@ print(f" - APP_ENV: {settings.APP_ENV}")
 print(f" - DEBUG: {settings.DEBUG}")
 print(f" - MONGODB_URL: {settings.MONGODB_URL}")
 print(f" - MONGODB_DB_NAME: {settings.MONGODB_DB_NAME}")
+print(f" - HELPY_PRO_API_URL: {settings.HELPY_PRO_API_URL}")
+print(f" - SESSION_EXPIRY_HOURS: {settings.SESSION_EXPIRY_HOURS}")
