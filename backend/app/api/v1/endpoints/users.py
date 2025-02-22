@@ -1,24 +1,11 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional, List
-from app.schemas.user import UserCreate, UserResponse, UserProfileUpdate
+from app.schemas.user import UserResponse, UserProfileUpdate
 from app.schemas.session import StretchingSession
 from app.services.user_service import UserService
 
 router = APIRouter()
 user_service = UserService()
-
-@router.post("/users/", response_model=UserResponse)
-async def create_user(
-    user: UserCreate,
-    session_id: Optional[str] = Query(None, description="기존 비회원 데이터 연동을 위한 session_id")
-):
-    """회원가입 API (이메일 + 비밀번호만 입력, 기존 비회원 데이터 연동 가능)"""
-    try:
-        user_id = await user_service.create_user(user.model_dump(), session_id)
-        created_user = await user_service.get_user(user_id)
-        return created_user
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/users/{user_id}", response_model=UserResponse)
 async def get_user(user_id: str):

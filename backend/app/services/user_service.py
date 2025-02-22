@@ -3,6 +3,7 @@ from app.models.user import UserDB
 from app.schemas.user import UserResponse, UserProfileUpdate
 from app.services.temp_session_service import TempSessionService
 from bson import ObjectId
+from typing import Optional
 
 class UserService:
     def __init__(self):
@@ -84,3 +85,11 @@ class UserService:
         if not user:
             return None
         return user.get("stretching_history", [])
+
+    async def get_user_by_email(self, email: str, include_password: bool = False) -> Optional[dict]:
+        """이메일로 사용자 조회"""
+        projection = None if include_password else {"password": 0}
+        user = await self.collection.find_one({"email": email}, projection)
+        if user:
+            user["id"] = str(user.pop("_id"))
+        return user

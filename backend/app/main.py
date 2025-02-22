@@ -4,7 +4,9 @@ from app.core.config import settings
 from app.core.database import MongoManager
 from app.api.v1.endpoints.users import router as users_router
 from app.api.v1.endpoints.session import router as session_router
+from app.api.v1.endpoints.auth import router as auth_router
 from app.services.temp_session_service import TempSessionService
+from app.services.auth_service import AuthService
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -64,6 +66,12 @@ app.include_router(
     tags=["session"]
 )
 
+app.include_router(
+    auth_router,
+    prefix=f"{settings.API_V1_PREFIX}/auth",
+    tags=["auth"]
+)
+
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting up the application...")
@@ -71,6 +79,7 @@ async def startup_event():
     MongoManager.initialize_db()
     # ✅ MongoDB 인덱스 초기화
     await TempSessionService.initialize_indexes()
+    await AuthService().initialize_indexes()
     logger.info("Application startup complete")
 
 if __name__ == "__main__":
@@ -84,3 +93,5 @@ if __name__ == "__main__":
         timeout_keep_alive=5,  # Keep-alive 타임아웃
         log_level="info"
     )
+
+
