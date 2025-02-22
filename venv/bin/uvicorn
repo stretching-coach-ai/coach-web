@@ -1,4 +1,4 @@
-#!/Users/kimdonghyeon/coach-web/venv/bin/python3.12
+#!/Users/gimdonghyeon/Desktop/coach-web/venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
