@@ -15,8 +15,10 @@ class TempSession(BaseModel):
     )
     stretching_sessions: List[StretchingSession] = Field(default_factory=list, description="스트레칭 세션 목록")
 
-    class Config:
-        allow_population_by_field_name = True
-        json_encoders = {
+    model_config = {
+        "populate_by_name": True,
+        "json_encoders": {
             datetime: lambda v: v.isoformat(),
-        }
+        },
+        "from_attributes": True
+    }

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List
 from bson import ObjectId
 import uuid
@@ -7,6 +7,7 @@ from app.core.database import MongoManager
 from app.models.temp_session import TempSession
 from app.schemas.user_input import UserInput
 from app.schemas.session import StretchingSession
+from app.core.config import settings
 
 class TempSessionService:
     """임시 세션 관리를 위한 서비스 클래스"""
@@ -25,12 +26,26 @@ class TempSessionService:
     @classmethod
     async def create_session(cls, session_id: str) -> TempSession:
         """새로운 임시 세션 생성"""
-        session = TempSession(session_id=session_id)
-        collection = MongoManager.get_collection(cls.collection_name)
+        # 현재 시간 기준으로 생성 및 만료 시간 설정
+        now = datetime.utcnow()
+        expires = now + timedelta(hours=settings.SESSION_EXPIRY_HOURS)
         
-        result = await collection.insert_one(session.dict(by_alias=True))
-        session.id = str(result.inserted_id)
-        return session
+        # 세션 데이터 준비
+        session_data = {
+            "session_id": session_id,
+            "created_at": now,
+            "expires_at": expires,
+            "stretching_sessions": []
+        }
+        
+        collection = MongoManager.get_collection(cls.collection_name)
+        result = await collection.insert_one(session_data)
+        
+        # MongoDB ObjectId를 문자열로 변환하여 세션 데이터에 추가
+        session_data["_id"] = str(result.inserted_id)
+        
+        # 생성된 세션 반환
+        return TempSession.model_validate(session_data)
     
     @classmethod
     async def get_session(cls, session_id: str) -> Optional[TempSession]:
@@ -38,8 +53,8 @@ class TempSessionService:
         collection = MongoManager.get_collection(cls.collection_name)
         data = await collection.find_one({"session_id": session_id})
         if data:
-            data["id"] = str(data.pop("_id"))
-            return TempSession(**data)
+            data["_id"] = str(data.pop("_id"))
+            return TempSession.model_validate(data)
         return None
     
     @classmethod
