@@ -5,6 +5,8 @@ from app.core.database import MongoManager
 from app.api.v1.endpoints.users import router as users_router
 from app.api.v1.endpoints.session import router as session_router
 from app.services.temp_session_service import TempSessionService
+import uvicorn
+from fastapi.middleware.cors import CORSMiddleware
 
 # 환경 변수 로드
 from dotenv import load_dotenv
@@ -40,6 +42,15 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+# CORS 설정
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 실제 운영환경에서는 구체적인 origin을 지정해야 함
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # ✅ API 라우터 포함
 app.include_router(
     users_router,
@@ -61,3 +72,15 @@ async def startup_event():
     # ✅ MongoDB 인덱스 초기화
     await TempSessionService.initialize_indexes()
     logger.info("Application startup complete")
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        workers=4,  # CPU 코어 수에 따라 조정
+        limit_concurrency=100,  # 동시 연결 제한
+        backlog=2048,  # 연결 대기열 크기
+        timeout_keep_alive=5,  # Keep-alive 타임아웃
+        log_level="info"
+    )

@@ -4,6 +4,8 @@ import logging
 from fastapi import HTTPException
 import json
 import time
+import asyncio
+from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.schemas.user_input import UserInput
@@ -19,6 +21,27 @@ class HelpyProService:
     API_URL = "https://api-cloud-function.elice.io/9f071d94-a459-429d-a375-9601e521b079"
     API_KEY = settings.HELPY_PRO_API_KEY
     MAX_TOKENS = 2048
+    
+    # 동시 요청 제어를 위한 세마포어
+    _semaphore = asyncio.Semaphore(50)  # 최대 10개의 동시 요청 허용
+    
+    # HTTP 클라이언트 풀
+    _client_pool = None
+    _max_connections = 50  # 최대 연결 수
+
+    @classmethod
+    @asynccontextmanager
+    async def get_client(cls):
+        """HTTP 클라이언트 풀 관리"""
+        if cls._client_pool is None:
+            limits = httpx.Limits(max_connections=cls._max_connections)
+            cls._client_pool = httpx.AsyncClient(timeout=None, limits=limits)
+        
+        try:
+            yield cls._client_pool
+        except Exception as e:
+            logger.error(f"Error with HTTP client: {e}")
+            raise
 
     @classmethod
     def _create_stretching_prompt(cls, user_input: UserInput) -> str:
@@ -52,15 +75,23 @@ class HelpyProService:
         }
 
         try:
-            logger.info(f"Generating stretching guide for session_id: {session_id}")
-            response = await cls._get_api_response(
-                session_id=session_id,
-                prompt=cls._create_stretching_prompt(user_input),
-                headers=headers
-            )
-            
-            return AIResponse(text=response)
+            # 세마포어를 사용하여 동시 요청 제어
+            async with cls._semaphore:
+                logger.info(f"Generating stretching guide for session_id: {session_id}")
+                response = await cls._get_api_response(
+                    session_id=session_id,
+                    prompt=cls._create_stretching_prompt(user_input),
+                    headers=headers
+                )
                 
+                return AIResponse(text=response)
+                
+        except asyncio.TimeoutError:
+            logger.error("Request timed out due to semaphore limit")
+            raise HTTPException(
+                status_code=503,
+                detail="서버가 너무 많은 요청을 처리중입니다. 잠시 후 다시 시도해주세요."
+            )
         except Exception as e:
             logger.error(f"Error in generate_stretching_guide: {str(e)}", exc_info=True)
             raise
@@ -76,8 +107,8 @@ class HelpyProService:
         request_data = {
             "model": "helpy-pro",
             "sess_id": session_id,
-            "temperature": 0.5,  # 더 결정적인 응답을 위해 낮춤
-            "max_tokens": 1000,  # 토큰 제한
+            "temperature": 0.5,
+            "max_tokens": 1000,
             "messages": [
                 {
                     "role": "system",
@@ -94,7 +125,7 @@ class HelpyProService:
             logger.info(f"Starting API request for session: {session_id}")
             start_time = time.time()
             
-            async with httpx.AsyncClient(timeout=None) as client:  # 타임아웃 제한 없음
+            async with cls.get_client() as client:
                 logger.debug(f"Sending request to API: {request_data}")
                 response = await client.post(
                     f"{cls.API_URL}/v1/chat/completions",
@@ -111,7 +142,6 @@ class HelpyProService:
                         message = response_data["choices"][0]["message"]
                         content = message.get("content", "").strip()
                         
-                        # Google 검색 결과 확인
                         if tool_calls := message.get("tool_calls"):
                             logger.info("Search performed:")
                             for call in tool_calls:
@@ -127,10 +157,6 @@ class HelpyProService:
                     logger.error(f"API Error: {response.status_code}")
                     return f"서버 오류 ({response.status_code}). 다시 시도해주세요."
 
-        except httpx.TimeoutException:
-            elapsed_time = time.time() - start_time
-            logger.error(f"Timeout after {elapsed_time:.2f}s")
-            return "시간 초과 (30초). 다시 시도해주세요."
         except Exception as e:
             logger.error(f"Error: {str(e)}")
             return "오류가 발생했습니다. 다시 시도해주세요." 
