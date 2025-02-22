@@ -55,21 +55,3 @@ async def create_stretching_session(
     )
     
     return ai_response
-
-@router.post("/sessions/{session_id}/stretching/{stretching_id}/feedback")
-async def add_stretching_feedback(
-    session_id: str,
-    stretching_id: str,
-    feedback: str
-):
-    """스트레칭 세션에 대한 피드백 추가"""
-    updated_session = await TempSessionService.update_stretching_feedback(
-        session_id=session_id,
-        stretching_id=stretching_id,
-        feedback=feedback
-    )
-    
-    if not updated_session:
-        raise HTTPException(status_code=404, detail="Session or stretching session not found")
-    
-    return {"message": "Feedback added successfully"}
