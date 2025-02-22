@@ -3,10 +3,10 @@ from typing import Optional, List
 from bson import ObjectId
 import uuid
 
-from backend.app.core.database import MongoManager
-from backend.app.models.temp_session import TempSession
-from backend.app.schemas.user_input import UserInput
-from backend.app.schemas.session import StretchingSession
+from app.core.database import MongoManager
+from app.models.temp_session import TempSession
+from app.schemas.user_input import UserInput
+from app.schemas.session import StretchingSession
 
 class TempSessionService:
     """임시 세션 관리를 위한 서비스 클래스"""

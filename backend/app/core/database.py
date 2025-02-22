@@ -1,5 +1,5 @@
 from motor.motor_asyncio import AsyncIOMotorClient
-from backend.app.core.config import settings
+from app.core.config import settings
 
 class MongoManager:
     """MongoDB 연결을 관리하는 클래스"""
@@ -10,6 +10,11 @@ class MongoManager:
     def get_db(cls):
         """MongoDB 데이터베이스 반환"""
         return cls.db
+
+    @classmethod
+    def get_collection(cls, collection_name: str):
+        """MongoDB 컬렉션 반환"""
+        return cls.db[collection_name]
 
     @classmethod
     def initialize_db(cls):

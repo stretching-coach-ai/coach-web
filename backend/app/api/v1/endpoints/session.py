@@ -1,9 +1,9 @@
 from uuid import uuid4
 from fastapi import APIRouter, Response, HTTPException
-from backend.app.services.temp_session_service import TempSessionService
-from backend.app.services.helpy_pro_service import HelpyProService
-from backend.app.schemas.user_input import UserInput
-from backend.app.schemas.ai_response import AIResponse
+from app.services.temp_session_service import TempSessionService
+from app.services.helpy_pro_service import HelpyProService
+from app.schemas.user_input import UserInput
+from app.schemas.ai_response import AIResponse
 
 router = APIRouter()
 

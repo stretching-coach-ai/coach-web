@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional, List
-from backend.app.schemas.user import UserCreate, UserResponse, UserProfileUpdate
-from backend.app.schemas.session import StretchingSession
-from backend.app.services.user_service import UserService
+from app.schemas.user import UserCreate, UserResponse, UserProfileUpdate
+from app.schemas.session import StretchingSession
+from app.services.user_service import UserService
 
 router = APIRouter()
 user_service = UserService()

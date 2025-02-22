@@ -1,7 +1,7 @@
-from backend.app.core.database import MongoManager
-from backend.app.models.user import UserDB
-from backend.app.schemas.user import UserResponse, UserProfileUpdate
-from backend.app.services.temp_session_service import TempSessionService
+from app.core.database import MongoManager
+from app.models.user import UserDB
+from app.schemas.user import UserResponse, UserProfileUpdate
+from app.services.temp_session_service import TempSessionService
 from bson import ObjectId
 
 class UserService:

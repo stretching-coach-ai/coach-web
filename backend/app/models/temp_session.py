@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 from typing import Optional, List
 from pydantic import BaseModel, Field
-from backend.app.schemas.session import StretchingSession
-from backend.app.core.config import settings
+from app.schemas.session import StretchingSession
+from app.core.config import settings
 
 class TempSession(BaseModel):
     """임시 세션 데이터를 MongoDB에 저장하기 위한 모델"""

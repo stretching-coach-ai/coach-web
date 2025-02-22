@@ -2,9 +2,9 @@ from typing import Optional
 import httpx
 from fastapi import HTTPException
 
-from backend.app.core.config import settings
-from backend.app.schemas.user_input import UserInput
-from backend.app.schemas.ai_response import AIResponse
+from app.core.config import settings
+from app.schemas.user_input import UserInput
+from app.schemas.ai_response import AIResponse
 
 class HelpyProService:
     """Helpy Pro API와의 통신을 담당하는 서비스 클래스"""

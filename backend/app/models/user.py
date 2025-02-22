@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field, EmailStr
-from backend.app.schemas.session import StretchingSession
+from app.schemas.session import StretchingSession
 
 class UserDB(BaseModel):
     """MongoDB에 저장할 사용자 모델"""

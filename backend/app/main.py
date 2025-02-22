@@ -1,9 +1,9 @@
 from fastapi import FastAPI
-from backend.app.core.config import settings
-from backend.app.core.database import MongoManager
-from backend.app.api.v1.endpoints.users import router as users_router
-from backend.app.api.v1.endpoints.session import router as session_router
-from backend.app.services.temp_session_service import TempSessionService
+from app.core.config import settings
+from app.core.database import MongoManager
+from app.api.v1.endpoints.users import router as users_router
+from app.api.v1.endpoints.session import router as session_router
+from app.services.temp_session_service import TempSessionService
 
 # 환경 변수 로드
 from dotenv import load_dotenv
