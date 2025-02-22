@@ -1,5 +1,25 @@
 # Stretching Coach AI Backend
 
+## 사전 요구사항
+
+### MongoDB 설치
+```bash
+# macOS (Homebrew)
+brew tap mongodb/brew
+brew install mongodb-community
+
+# Windows
+# MongoDB 웹사이트에서 MongoDB Community Server 다운로드 및 설치
+# https://www.mongodb.com/try/download/community
+
+# MongoDB 서비스 시작
+# macOS
+brew services start mongodb-community
+
+# Windows
+# MongoDB는 설치 시 자동으로 서비스로 등록되어 실행됩니다
+```
+
 ## 프로젝트 구조
 ```
 backend/
