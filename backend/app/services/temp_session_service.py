@@ -1,10 +1,12 @@
 from datetime import datetime
 from typing import Optional, List
 from bson import ObjectId
+import uuid
 
 from backend.app.core.database import MongoManager
 from backend.app.models.temp_session import TempSession
 from backend.app.schemas.user_input import UserInput
+from backend.app.schemas.session import StretchingSession
 
 class TempSessionService:
     """임시 세션 관리를 위한 서비스 클래스"""
@@ -41,42 +43,82 @@ class TempSessionService:
         return None
     
     @classmethod
-    async def update_user_input(cls, session_id: str, user_input: UserInput) -> Optional[TempSession]:
-        """사용자 입력 데이터 업데이트"""
+    async def add_stretching_session(
+        cls, 
+        session_id: str, 
+        user_input: UserInput
+    ) -> Optional[TempSession]:
+        """새로운 스트레칭 세션 추가"""
+        stretching_session = StretchingSession(
+            id=f"stretch_{uuid.uuid4().hex[:8]}",
+            user_input=user_input
+        )
+        
         collection = MongoManager.get_collection(cls.collection_name)
         result = await collection.find_one_and_update(
             {"session_id": session_id},
-            {"$set": {"user_input": user_input.dict()}},
+            {
+                "$push": {
+                    "stretching_sessions": stretching_session.dict()
+                }
+            },
             return_document=True
         )
+        
         if result:
             result["id"] = str(result.pop("_id"))
             return TempSession(**result)
         return None
     
     @classmethod
-    async def update_ai_response(cls, session_id: str, ai_response: str) -> Optional[TempSession]:
-        """AI 응답 업데이트"""
+    async def update_stretching_ai_response(
+        cls, 
+        session_id: str,
+        stretching_id: str,
+        ai_response: str
+    ) -> Optional[TempSession]:
+        """스트레칭 세션의 AI 응답 업데이트"""
         collection = MongoManager.get_collection(cls.collection_name)
         result = await collection.find_one_and_update(
-            {"session_id": session_id},
-            {"$set": {"ai_response": ai_response}},
+            {
+                "session_id": session_id,
+                "stretching_sessions.id": stretching_id
+            },
+            {
+                "$set": {
+                    "stretching_sessions.$.ai_response": ai_response
+                }
+            },
             return_document=True
         )
+        
         if result:
             result["id"] = str(result.pop("_id"))
             return TempSession(**result)
         return None
     
     @classmethod
-    async def update_feedback(cls, session_id: str, feedback: str) -> Optional[TempSession]:
-        """사용자 피드백 업데이트"""
+    async def update_stretching_feedback(
+        cls,
+        session_id: str,
+        stretching_id: str,
+        feedback: str
+    ) -> Optional[TempSession]:
+        """스트레칭 세션의 피드백 업데이트"""
         collection = MongoManager.get_collection(cls.collection_name)
         result = await collection.find_one_and_update(
-            {"session_id": session_id},
-            {"$set": {"feedback": feedback}},
+            {
+                "session_id": session_id,
+                "stretching_sessions.id": stretching_id
+            },
+            {
+                "$set": {
+                    "stretching_sessions.$.feedback": feedback
+                }
+            },
             return_document=True
         )
+        
         if result:
             result["id"] = str(result.pop("_id"))
             return TempSession(**result)

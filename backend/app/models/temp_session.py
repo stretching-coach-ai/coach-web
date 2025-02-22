@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
-from backend.app.schemas.user_input import UserInput
+from backend.app.schemas.session import StretchingSession
 from backend.app.core.config import settings
 
 class TempSession(BaseModel):
@@ -13,9 +13,7 @@ class TempSession(BaseModel):
         default_factory=lambda: datetime.utcnow() + timedelta(hours=settings.SESSION_EXPIRY_HOURS),
         description="세션 만료 시간"
     )
-    user_input: Optional[UserInput] = Field(None, description="사용자 입력 데이터")
-    ai_response: Optional[str] = Field(None, description="AI 추천 응답 텍스트")
-    feedback: Optional[str] = Field(None, description="사용자 피드백")
+    stretching_sessions: List[StretchingSession] = Field(default_factory=list, description="스트레칭 세션 목록")
 
     class Config:
         allow_population_by_field_name = True
