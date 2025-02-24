@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { StardustBold } from '../fonts';
 import { Stardust } from '../fonts';
 
-const signup = () => {
+const select = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,7 +31,7 @@ const signup = () => {
       <article className="mt-9 flex flex-col justify-center items-center">
         <div>
           <p className={`${StardustBold.className} text-[#689700] text-[32px]`}>
-            회원가입
+            이거 뭐라고하지
           </p>
         </div>
         <div className="mt-[60px] text-[24px] w-[332px] h-[58px]">
@@ -49,32 +49,28 @@ const signup = () => {
             <p
               className={`${Stardust.className} border-b-[2px] border-b-[#93D400]`}
             >
-              좋은 선택이다부기!
+              뭐냐부기
             </p>
           </div>
-        </div>
-        <div className="bg-[#F9FFEB] px-3 py-6">
-          <Textarea
-            className="w-[339px] h-[63px] bg-white rounded-[10px] placeholder-[#9E9797]"
-            placeholder="이메일"
-          ></Textarea>
-          <Textarea
-            className="w-[339px] h-[63px] bg-white my-7 rounded-[10px] placeholder-[#9E9797]"
-            placeholder="비밀번호"
-          ></Textarea>
-          <Textarea
-            className="w-[339px] h-[63px] bg-white rounded-[10px] placeholder-[#9E9797]"
-            placeholder="이름"
-          ></Textarea>
-        </div>
-        <div className="mt-[159px]">
-          <Button variant="main" size="main" className="text-[18px]">
-            회원가입하기
-          </Button>
+          <div className={`${Stardust.className} mt-[86px]`}>
+            <Button variant="main" size="main" className="text-[18px]">
+              로그인
+            </Button>
+            <Button variant="main" size="main" className="text-[18px] my-9">
+              비로그인
+            </Button>
+            <Button
+              variant="main"
+              size="main"
+              className="text-[18px] bg-[#9EBC5A] text-white"
+            >
+              회원가입
+            </Button>
+          </div>
         </div>
       </article>
     </main>
   );
 };
 
-export default signup;
+export default select;
