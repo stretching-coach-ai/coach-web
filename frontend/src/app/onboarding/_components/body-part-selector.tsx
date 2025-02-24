@@ -19,7 +19,7 @@ export const BodyPartSelector = () => {
   };
 
   return (
-    <div className="max-w-md mt-[72px] px-5 flex flex-col items-start m-auto">
+    <div className="max-w-md flex flex-col items-start m-auto">
       <div className="flex items-end gap-2">
         <Image
           src={
