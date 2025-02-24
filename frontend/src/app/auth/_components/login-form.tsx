@@ -87,13 +87,7 @@ export const LoginForm = () => {
             )}
           />
 
-          <Button
-            type="submit"
-            variant="main"
-            size="main"
-            className="mx-auto"
-            disabled={false}
-          >
+          <Button type="submit" variant="main" size="main" disabled={false}>
             로그인하기
           </Button>
         </form>
