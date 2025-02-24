@@ -118,4 +118,17 @@ body,
   body {
     @apply bg-background text-foreground;
   }
+
+  /* 브라우저의 기본 autoFill 스타일 제거 */
+  input:-webkit-autofill {
+    box-shadow: 0 0 0px 1000px #f7ffe5 inset !important;
+    -webkit-text-fill-color: #000 !important;
+  }
+
+  input:-webkit-autofill:focus {
+    box-shadow:
+      0 0 0px 1000px #f7ffe5 inset,
+      0 0 0 2px #93d400 !important;
+    border-color: #93d400 !important;
+  }
 }
