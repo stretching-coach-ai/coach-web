@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { Stardust } from '@/app/fonts';
 
 interface Props {
   title: string;
@@ -13,10 +14,12 @@ export const Header = ({ title }: Props) => {
         width={50}
         height={40}
       />
-      <div>
-        <p className="w-fit text-sm bg-[#D8FF7F] py-2 px-3 rounded-md rounded-bl-none">
-          {title}
-        </p>
+      <div
+        className={`${Stardust.className} text-[24px] border-b-[2px] border-b-[#93D400]`}
+      >
+        {title.split('<br />').map((line, index) => (
+          <p key={index}>{line}</p>
+        ))}
       </div>
     </div>
   );
