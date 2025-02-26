@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 
 const WelcomePage = () => {
   return (
-    <main className={`${PeoplefirstNeat.className} h-100`}>
+    <main
+      className={`${PeoplefirstNeat.className} overflow-hidden max-w-md flex flex-col items-start m-auto`}
+    >
       <div className="w-[227px] h-[140px] ml-7 mt-[110px] mb-[29px]">
         <Image
           src="/assets/꾸부기로고.png"
@@ -21,7 +23,7 @@ const WelcomePage = () => {
           부기온앤온<br></br>가져와
         </p>
       </div>
-      <div className="fixed translate-x-[40px] translate-y-[40px]">
+      <div className="fixed translate-x-[40px] translate-y-[40px] top-[62%]">
         <Image
           src="/assets/메인말풍선.png"
           alt="로고"
@@ -33,7 +35,7 @@ const WelcomePage = () => {
           <p className="text-[20px]">거북목을 극복한 나처럼</p>
         </div>
       </div>
-      <div className="fixed scale-x-[-1] translate-x-[200px] -translate-y-[140px]">
+      <div className="fixed scale-x-[-1] translate-x-[200px] -translate-y-[140px] top-[62%]">
         <Image
           src="/assets/bugi.png"
           alt="로고"
