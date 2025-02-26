@@ -1,34 +1,95 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import Image from 'next/image';
-import Link from 'next/link';
 import { StardustBold } from '../fonts';
 import { Stardust } from '../fonts';
+import { useRef } from 'react';
 
 const signup = () => {
+  const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [isBtnEnabled, setIsBtnEnabled] = useState(false);
-
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNameChange = (e: any) => {
     setName(e.target.value);
   };
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEmailChange = (e: any) => {
     setEmail(e.target.value);
   };
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePasswordChange = (e: any) => {
     setPassword(e.target.value);
   };
 
+  const errorRef = useRef<HTMLDivElement>(null);
+  const toggleVisibillity = (
+    ref: React.RefObject<HTMLDivElement | null>,
+    isVisible: boolean,
+  ) => {
+    if (ref.current) {
+      ref.current.style.display = isVisible ? 'block' : 'none';
+    }
+  };
+
+  const handleSignup = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('api/v1/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      if (!response.ok) {
+        toggleVisibillity(errorRef, true);
+        const data = await response.json();
+        throw new Error('회원가입 실패', data.message);
+      }
+      router.push('/onboarding');
+    } catch (error) {
+      toggleVisibillity(errorRef, true);
+      console.error('오류 발생:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <main>
-      <article className="mt-9 flex flex-col justify-center items-center">
+    <main className="max-w-md flex flex-col items-start m-auto">
+      <article className="mx-auto mt-9 flex flex-col justify-center items-center">
+        <div
+          className="w-full h-full absolute top-0"
+          ref={errorRef}
+          style={{ display: 'none' }}
+          onClick={() => toggleVisibillity(errorRef, false)}
+        >
+          <div className="absolute top-0 bg-[#0000003b] w-full h-full"></div>
+          <div
+            className="absolute top-[30%] w-[278px] h-[185px] bg-[#323232] rounded-[25px] mx-auto my-auto"
+            style={{ left: 'calc(50% - 139px)' }}
+          >
+            <div className="flex flex-col justify-center items-center">
+              <div className="border-b-2 border-b-white mt-[57px] mb-[32px]">
+                <p className="text-[20px] text-white">
+                  회원가입에 실패했습니다!
+                </p>
+              </div>
+              <div>
+                <button
+                  className="bg-white rounded-[6px] w-[174px] h-8"
+                  onClick={() => toggleVisibillity(errorRef, false)}
+                >
+                  확인
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
         <div>
           <p className={`${StardustBold.className} text-[#689700] text-[32px]`}>
             회원가입
@@ -57,18 +118,27 @@ const signup = () => {
           <Textarea
             className="w-[339px] h-[63px] bg-white rounded-[10px] placeholder-[#9E9797]"
             placeholder="이메일"
+            onChange={handleEmailChange}
           ></Textarea>
           <Textarea
             className="w-[339px] h-[63px] bg-white my-7 rounded-[10px] placeholder-[#9E9797]"
             placeholder="비밀번호"
+            onChange={handlePasswordChange}
           ></Textarea>
           <Textarea
             className="w-[339px] h-[63px] bg-white rounded-[10px] placeholder-[#9E9797]"
             placeholder="이름"
+            onChange={handleNameChange}
           ></Textarea>
         </div>
         <div className="mt-[159px]">
-          <Button variant="main" size="main" className="text-[18px]">
+          <Button
+            className={`${StardustBold.className} text-[18px]`}
+            variant="main"
+            size="main"
+            onClick={handleSignup}
+            disabled={isLoading}
+          >
             회원가입하기
           </Button>
         </div>
