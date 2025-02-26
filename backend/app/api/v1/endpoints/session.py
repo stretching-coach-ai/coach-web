@@ -184,16 +184,30 @@ async def create_stretching_session_stream(
         
         # 4. AI 가이드 스트리밍 생성
         logger.info("Generating AI guide (streaming)")
+        
+        # SSE 형식으로 변환하는 내부 함수 정의
+        async def format_as_sse():
+            try:
+                async for chunk in HelpyProService.generate_stretching_guide_stream(
+                    session_id=session_id,
+                    stretching_id=stretching_id,
+                    user_input=user_input,
+                    relevant_exercises=relevant_exercises,
+                    temp_session_service=TempSessionService,
+                    user_service=user_service,
+                    current_user=current_user
+                ):
+                    # StreamingAIResponse를 SSE 형식으로 변환
+                    data = json.dumps({"content": chunk.content, "done": chunk.done})
+                    yield f"data: {data}\n\n"
+                    logger.debug(f"Sent SSE chunk: {data[:50]}...")
+            except Exception as e:
+                logger.error(f"Error in SSE stream: {str(e)}", exc_info=True)
+                error_data = json.dumps({"content": "오류가 발생했습니다. 다시 시도해주세요.", "done": True})
+                yield f"data: {error_data}\n\n"
+        
         return StreamingResponse(
-            HelpyProService.generate_stretching_guide_stream(
-                session_id=session_id,
-                stretching_id=stretching_id,
-                user_input=user_input,
-                relevant_exercises=relevant_exercises,
-                temp_session_service=TempSessionService,
-                user_service=user_service,
-                current_user=current_user
-            ),
+            format_as_sse(),
             media_type="text/event-stream"
         )
         
