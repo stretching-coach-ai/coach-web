@@ -15,7 +15,9 @@ router = APIRouter()
 @router.post("/sessions", status_code=201)
 async def create_session(response: Response):
     """새로운 세션 생성"""
-    session = await TempSessionService.create_session()
+    # UUID를 사용하여 고유한 session_id 생성
+    session_id = str(uuid4())
+    session = await TempSessionService.create_session(session_id)
     response.set_cookie(key="session_id", value=session.id, httponly=True)
     return {"session_id": session.id}
 
