@@ -5,12 +5,14 @@ import { cn } from '@/lib/utils';
 import { UserInfoForm } from './user-info-form';
 import { BodyPartSelector } from './body-part-selector';
 import { Stardust } from '@/app/fonts';
+import React from 'react';
 
 const SLIDES = Array.from(Array(2).keys());
 
 export const EmbalCarousel = () => {
   const [emblaRef, emblaApi] = useEmblaCarousel({
-    dragFree: false, // 자유로운 드래그 비활성화
+    dragFree: false,
+    watchDrag: false,
     containScroll: 'keepSnaps',
   });
 
@@ -24,9 +26,8 @@ export const EmbalCarousel = () => {
       <div className="embla__controls">
         <div className="embla__dots">
           {scrollSnaps.map((_, index) => (
-            <>
+            <React.Fragment key={index}>
               <DotButton
-                key={index}
                 className={'embla__dot'.concat(
                   index === selectedIndex ? ' embla__dot--selected' : '',
                 )}
@@ -43,7 +44,7 @@ export const EmbalCarousel = () => {
                   />
                 </div>
               )}
-            </>
+            </React.Fragment>
           ))}
         </div>
       </div>
