@@ -43,6 +43,14 @@ const WelcomePage = () => {
           height={310}
         ></Image>
       </div>
+      
+      <div className="fixed bottom-10 left-0 right-0 flex justify-center">
+        <Link href="/main">
+          <Button className="bg-gradient-to-r from-[#6B925C] to-[#9EB384] text-white px-8 py-2 rounded-full shadow-lg hover:shadow-xl transition-shadow">
+            새로운 메인 페이지로 이동
+          </Button>
+        </Link>
+      </div>
     </main>
   );
 };
