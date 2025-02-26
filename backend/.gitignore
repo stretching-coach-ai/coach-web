@@ -1,9 +1,24 @@
-.env
+# Python
 __pycache__/
-*.pyc
-.pytest_cache/
-.coverage
-htmlcov/
+*.py[cod]
+*$py.class
+*.so
+.Python
 venv/
+env/
 .env
-app.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+log/
