@@ -1,9 +1,7 @@
-import { BodyPartSelector } from './_components/body-part-selector';
-import { UserInfoForm } from './_components/user-info-form';
+import { EmbalCarousel } from './_components/embla-carousel';
 
 const Page = () => {
-  return <BodyPartSelector />;
-  // return <UserInfoForm />;
+  return <EmbalCarousel />;
 };
 
 export default Page;

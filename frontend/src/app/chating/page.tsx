@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Stardust } from '../fonts';
-import { Gnb } from '@/components/gnb';
-import { Fnb } from '@/components/Fng';
+import { Gnb } from '@/components/Gnb';
+import { Fnb } from '@/components/Fnb';
 
 export default function ChatUI() {
   const [messages, setMessages] = useState([

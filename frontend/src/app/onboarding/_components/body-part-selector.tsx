@@ -5,10 +5,12 @@ import Image from 'next/image';
 import { useState } from 'react';
 
 import { Stardust } from '@/app/fonts';
+import { useRouter } from 'next/navigation';
 
 export const BodyPartSelector = () => {
   const [pathId, setPathId] = useState<string | null>(null);
   const [name, setName] = useState<string | null>('');
+  const router = useRouter();
 
   const handleClick = (event: React.MouseEvent<SVGSVGElement>) => {
     const target = event.target as HTMLElement;
@@ -2003,6 +2005,14 @@ export const BodyPartSelector = () => {
         size="main"
         className="m-auto"
         disabled={pathId === null || name === null || name === ''}
+        onClick={() => {
+          const storedUserInfo = JSON.parse(localStorage.getItem('userInfo')!);
+          const selected_body_parts = name;
+          const updatedUserInfo = { ...storedUserInfo, selected_body_parts };
+
+          localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
+          router.replace('/chating');
+        }}
       >
         선택했어요
       </Button>
