@@ -36,3 +36,16 @@ class AIResponse(BaseModel):
 """
             }
         }
+
+class StreamingAIResponse(BaseModel):
+    """스트리밍 응답을 위한 모델"""
+    content: str = Field(..., description="스트리밍 응답 텍스트 조각")
+    done: bool = Field(default=False, description="스트리밍이 완료되었는지 여부")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "content": "[분석]\n- 상태: 사무직으로 인한 목, 어깨 부위의 통증",
+                "done": False
+            }
+        }

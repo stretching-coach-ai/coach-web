@@ -74,15 +74,15 @@ class TempSessionService:
             {"session_id": session_id},
             {
                 "$push": {
-                    "stretching_sessions": stretching_session.dict()
+                    "stretching_sessions": stretching_session.model_dump()
                 }
             },
             return_document=True
         )
         
         if result:
-            result["id"] = str(result.pop("_id"))
-            return TempSession(**result)
+            result["_id"] = str(result.pop("_id"))
+            return TempSession.model_validate(result)
         return None
     
     @classmethod
@@ -108,8 +108,8 @@ class TempSessionService:
         )
         
         if result:
-            result["id"] = str(result.pop("_id"))
-            return TempSession(**result)
+            result["_id"] = str(result.pop("_id"))
+            return TempSession.model_validate(result)
         return None
     
     @classmethod
@@ -135,8 +135,8 @@ class TempSessionService:
         )
         
         if result:
-            result["id"] = str(result.pop("_id"))
-            return TempSession(**result)
+            result["_id"] = str(result.pop("_id"))
+            return TempSession.model_validate(result)
         return None
     
     @classmethod

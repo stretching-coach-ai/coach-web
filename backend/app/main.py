@@ -7,6 +7,7 @@ from app.api.v1.endpoints.session import router as session_router
 from app.api.v1.endpoints.auth import router as auth_router
 from app.services.temp_session_service import TempSessionService
 from app.services.auth_service import AuthService
+from app.services.embedding_service import EmbeddingService
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -47,7 +48,7 @@ app = FastAPI(
 # CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 실제 운영환경에서는 구체적인 origin을 지정해야 함
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -77,9 +78,29 @@ async def startup_event():
     logger.info("Starting up the application...")
     # ✅ 데이터베이스 초기화
     MongoManager.initialize_db()
+    
+    # MongoDB 클라이언트 초기화
+    try:
+        # MongoDB 연결 초기화 추가
+        await MongoManager.initialize()
+        logger.info("MongoDB connection initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize MongoDB connection: {str(e)}", exc_info=True)
+        logger.warning("Application will continue, but database operations may not work properly")
+    
     # ✅ MongoDB 인덱스 초기화
     await TempSessionService.initialize_indexes()
     await AuthService().initialize_indexes()
+    
+    # ✅ 임베딩 서비스 초기화
+    logger.info("Initializing embedding service...")
+    try:
+        await EmbeddingService.initialize()
+        logger.info("Embedding service initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize embedding service: {str(e)}", exc_info=True)
+        logger.warning("Application will continue, but embedding-based search may not work properly")
+    
     logger.info("Application startup complete")
 
 if __name__ == "__main__":
