@@ -54,7 +54,11 @@ export const UserInfoForm = ({ onDotButtonClick }: Props) => {
 
   const onSubmit = (values: z.infer<typeof FormSchema>) => {
     console.log(values);
-    onDotButtonClick(0);
+    if (localStorage.getItem('userInfo')) {
+      localStorage.removeItem('userInfo');
+    }
+    localStorage.setItem('userInfo', JSON.stringify(values));
+    onDotButtonClick(1);
   };
 
   return (
@@ -161,7 +165,7 @@ export const UserInfoForm = ({ onDotButtonClick }: Props) => {
             />
 
             <Button
-              type="button"
+              type="submit"
               variant="main"
               size="main"
               // disabled={
@@ -170,7 +174,7 @@ export const UserInfoForm = ({ onDotButtonClick }: Props) => {
               //   !form.watch('dailyRoutine')
               // }
               disabled={!form.formState.isValid}
-              onClick={() => onDotButtonClick(1)}
+              // onClick={() => onDotButtonClick(1)}
             >
               다 입력했어요
             </Button>
