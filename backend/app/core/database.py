@@ -10,9 +10,9 @@ class MongoManager:
     db = None
 
     @classmethod
-    async def initialize(cls):
-        """MongoDB 클라이언트 초기화"""
-        logger.info(f"Initializing MongoDB connection to {settings.MONGODB_URL}")
+    async def connect(cls):
+        """MongoDB 클라이언트 연결"""
+        logger.info(f"Connecting to MongoDB at {settings.MONGODB_URL}")
         try:
             cls.client = AsyncIOMotorClient(settings.MONGODB_URL)
             cls.db = cls.client[settings.MONGODB_DB_NAME]
@@ -24,6 +24,22 @@ class MongoManager:
         except Exception as e:
             logger.error(f"MongoDB connection failed: {str(e)}")
             raise
+
+    @classmethod
+    async def initialize(cls):
+        """MongoDB 클라이언트 초기화 (이전 버전과의 호환성 유지)"""
+        return await cls.connect()
+
+    @classmethod
+    async def close(cls):
+        """MongoDB 클라이언트 연결 종료"""
+        if cls.client:
+            logger.info("Closing MongoDB connection")
+            cls.client.close()
+            cls.client = None
+            cls.db = None
+            return True
+        return False
 
     @classmethod
     def get_db(cls):
