@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     MONGODB_INIT_MODE: str = os.getenv("MONGODB_INIT_MODE", "none")
 
     # Helpy Pro API Configuration
-    HELPY_PRO_API_URL: str = os.getenv("HELPY_PRO_API_URL", "https://api-cloud-function.elice.io/8d0fbc41-2edd-4525-8af7-25a6f429ad11")
+    HELPY_PRO_API_URL: str = os.getenv("HELPY_PRO_API_URL", "https://api-cloud-function.elice.io/9f071d94-a459-429d-a375-9601e521b079")
     HELPY_PRO_API_KEY: str = os.getenv("HELPY_PRO_API_KEY", "")
 
     # Session Configuration
