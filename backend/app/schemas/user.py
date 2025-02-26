@@ -7,6 +7,7 @@ class UserCreate(BaseModel):
     """회원가입 요청 모델 (이메일 + 비밀번호만 입력)"""
     email: EmailStr
     password: str = Field(min_length=6, max_length=100)
+    name: Optional[str] = None
 
 class UserResponse(BaseModel):
     """회원가입 후 응답 모델"""

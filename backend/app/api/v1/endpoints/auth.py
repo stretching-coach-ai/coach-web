@@ -19,6 +19,7 @@ async def register(
         user = await auth_service.register(
             user_data.email,
             user_data.password,
+            user_data.name,
             session_cookie
         )
         

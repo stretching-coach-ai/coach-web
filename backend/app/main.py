@@ -27,7 +27,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-load_dotenv()  # .env 파일에서 환경 변수 로드
+load_dotenv()  
 
 # 환경 변수 로드 확인
 logger.info("🔍 Loaded Environment Variables:")
@@ -67,9 +67,10 @@ app.include_router(
     tags=["session"]
 )
 
+# auth 라우터는 /api/v1/auth 접두사로 변경
 app.include_router(
     auth_router,
-    prefix=settings.API_V1_PREFIX,
+    prefix=f"{settings.API_V1_PREFIX}/auth",
     tags=["auth"]
 )
 

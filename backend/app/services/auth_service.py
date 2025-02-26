@@ -18,7 +18,7 @@ class AuthService:
         await self.sessions.create_index("session_id", unique=True)
         await self.sessions.create_index("expires_at", expireAfterSeconds=0)
 
-    async def register(self, email: str, password: str, session_id: Optional[str] = None) -> UserResponse:
+    async def register(self, email: str, password: str, name: Optional[str] = None, session_id: Optional[str] = None) -> UserResponse:
         # 1. 이메일 중복 체크
         existing_user = await self.user_service.get_user_by_email(email)
         if existing_user:
@@ -30,6 +30,10 @@ class AuthService:
             "password": bcrypt.hash(password),
             "created_at": datetime.utcnow()
         }
+        
+        # name이 제공된 경우 추가
+        if name:
+            user_data["name"] = name
         
         # 3. 사용자 생성 (기존 UserService 활용)
         user_id = await self.user_service.create_user(user_data, session_id)
