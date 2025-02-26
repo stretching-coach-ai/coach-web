@@ -4,6 +4,8 @@ import { getBodyPartName } from '@/utils/getBodyPartName';
 import Image from 'next/image';
 import { useState } from 'react';
 
+import { Stardust } from '@/app/fonts';
+
 export const BodyPartSelector = () => {
   const [pathId, setPathId] = useState<string | null>(null);
   const [name, setName] = useState<string | null>('');
@@ -11,7 +13,9 @@ export const BodyPartSelector = () => {
   const handleClick = (event: React.MouseEvent<SVGSVGElement>) => {
     const target = event.target as HTMLElement;
     const currentPathId = target.closest('path')?.id;
-
+    if (currentPathId === 'path12') {
+      return;
+    }
     if (currentPathId && pathId !== currentPathId) {
       setPathId(currentPathId);
       setName(getBodyPartName(currentPathId));
@@ -19,39 +23,35 @@ export const BodyPartSelector = () => {
   };
 
   return (
-    <div className="max-w-md flex flex-col items-start m-auto">
+    <div
+      className={`${Stardust.className} mt-9 w-[390px] flex flex-col justify-center m-auto`}
+    >
       <div className="flex items-end gap-2">
         <Image
           src={
-            name !== null ? '/assets/bugi-head.png' : '/assets/crying-bugi.png'
+            name === null ? '/assets/crying-bugi.png' : '/assets/bugi-head.png'
           }
           alt="메인 캐릭터 부기 이미지"
           width={50}
           height={40}
         />
         <div>
-          <p className="w-fit text-sm bg-[#D8FF7F] py-2 px-3 rounded-md rounded-bl-none">
+          <p className="inline-block text-[24px] border-b-[2px] border-b-[#93D400]">
             스트레칭 부위를
             <br />
             선택하라부기!
           </p>
-          {pathId !== null &&
-            (name !== null ? (
-              <p className="mt-1 w-fit text-sm bg-[#D8FF7F] py-2 px-3 rounded-md rounded-bl-none">
-                {name} 아프냐부기?
-              </p>
-            ) : (
-              <p className="mt-1 w-fit text-sm bg-[#D8FF7F] py-2 px-3 rounded-md rounded-bl-none">
-                그 부위는 아직 공부중이다 부기.. 미안부기
-              </p>
-            ))}
+          <p className="block mt-2">
+            {name !== '' && name !== null && `> ${name} 아프냐부기?`}
+            {name === null && `> 그 부위는 아직 공부중이다부기. . 미안부기`}
+          </p>
         </div>
       </div>
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 2666.6667 2666.6667"
-        height="400"
-        width="400"
+        height="380"
+        width="380"
         id="svg2"
         version="1.1"
         onClick={handleClick}
@@ -2001,7 +2001,7 @@ export const BodyPartSelector = () => {
       <Button
         variant="main"
         size="main"
-        className="mx-auto"
+        className="m-auto"
         disabled={pathId === null || name === null || name === ''}
       >
         선택했어요
