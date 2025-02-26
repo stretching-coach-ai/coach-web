@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import httpx
 import logging
 from fastapi import HTTPException
@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.schemas.user_input import UserInput
 from app.schemas.ai_response import AIResponse
+from app.services.embedding_service import EmbeddingService
 
 # 로거 설정
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ class HelpyProService:
     MAX_TOKENS = 2048
     
     # 동시 요청 제어를 위한 세마포어
-    _semaphore = asyncio.Semaphore(50)  # 최대 10개의 동시 요청 허용
+    _semaphore = asyncio.Semaphore(50)  # 최대 50개의 동시 요청 허용
     
     # HTTP 클라이언트 풀
     _client_pool = None
@@ -44,28 +45,84 @@ class HelpyProService:
             raise
 
     @classmethod
-    def _create_stretching_prompt(cls, user_input: UserInput) -> str:
+    def _create_stretching_prompt(cls, user_input: UserInput, relevant_exercises: List[Dict[str, Any]] = None) -> str:
         """스트레칭 가이드 생성을 위한 통합 프롬프트"""
-        return f"""사용자 데이터를 분석하고 스트레칭 가이드를 제공해주세요.
+        
+        # 기본 프롬프트
+        prompt = f"""사용자 데이터를 분석하고 스트레칭 가이드를 제공해주세요.
 
 데이터: {user_input.model_dump_json()}
 
 검색어: "{user_input.selected_body_parts} 스트레칭"
+"""
 
-형식:
+        # 관련 스트레칭 정보가 있는 경우 추가
+        if relevant_exercises and len(relevant_exercises) > 0:
+            prompt += "\n참고할 스트레칭 정보:\n"
+            
+            for i, item in enumerate(relevant_exercises, 1):
+                exercise = item["exercise"]
+                muscle = item["muscle"]
+                similarity = item.get("similarity", 0)
+                
+                # 기본 정보
+                prompt += f"\n[스트레칭 {i} - {muscle}] (유사도: {similarity:.2f})\n"
+                prompt += f"제목: {exercise.get('title', '정보 없음')}\n"
+                
+                # 스트레칭 상세 정보
+                enhanced = exercise.get("enhanced_metadata", {})
+                stretching_details = enhanced.get("스트레칭_상세화", {})
+                
+                if stretching_details:
+                    # 동작 단계
+                    steps = stretching_details.get("동작_단계", [])
+                    if steps:
+                        prompt += "동작 단계:\n"
+                        for step in steps:
+                            prompt += f"- {step}\n"
+                    
+                    # 호흡 패턴
+                    breathing = stretching_details.get("호흡_패턴", [])
+                    if breathing:
+                        prompt += "호흡 패턴:\n"
+                        for breath in breathing:
+                            prompt += f"- {breath}\n"
+                    
+                    # 느껴야 할 감각
+                    feeling = stretching_details.get("느껴야_할_감각", "")
+                    if feeling:
+                        prompt += f"느껴야 할 감각: {feeling}\n"
+                
+                # 주의사항
+                safety = enhanced.get("안전_및_주의사항", {})
+                if safety:
+                    cautions = safety.get("수행_시_주의점", [])
+                    if cautions:
+                        prompt += "주의사항:\n"
+                        for caution in cautions:
+                            prompt += f"- {caution}\n"
+
+        # 응답 형식 지정
+        prompt += """
+다음 형식으로 답변을 구성하세요:
 [분석]
 - 상태/위험/개선점
 
 [가이드]
 - 스트레칭
 - 생활수칙
-- 주의사항"""
+- 주의사항
+
+답변에 제공된 스트레칭 정보를 반드시 참조하고, 필요한 경우 Google 검색을 활용하세요."""
+
+        return prompt
 
     @classmethod
     async def generate_stretching_guide(
         cls, 
         session_id: str,
-        user_input: UserInput
+        user_input: UserInput,
+        relevant_exercises: List[Dict[str, Any]] = None
     ) -> AIResponse:
         """스트레칭 가이드 생성"""
         headers = {
@@ -75,12 +132,30 @@ class HelpyProService:
         }
 
         try:
+            # 임베딩 검색 결과가 없는 경우 검색 수행
+            if not relevant_exercises:
+                logger.info("임베딩 검색 수행 중...")
+                body_parts = [part.strip() for part in user_input.selected_body_parts.split(',')]
+                relevant_exercises = await EmbeddingService.search(
+                    query=user_input.pain_description,
+                    body_parts=body_parts,
+                    occupation=user_input.occupation,
+                    top_k=3
+                )
+                logger.info(f"임베딩 검색 완료: {len(relevant_exercises)}개 결과 찾음")
+            
             # 세마포어를 사용하여 동시 요청 제어
             async with cls._semaphore:
                 logger.info(f"Generating stretching guide for session_id: {session_id}")
+                
+                # 프롬프트 생성
+                prompt = cls._create_stretching_prompt(user_input, relevant_exercises)
+                logger.debug(f"Generated prompt: {prompt[:500]}...")
+                
+                # API 요청
                 response = await cls._get_api_response(
                     session_id=session_id,
-                    prompt=cls._create_stretching_prompt(user_input),
+                    prompt=prompt,
                     headers=headers
                 )
                 

@@ -7,6 +7,7 @@ from app.api.v1.endpoints.session import router as session_router
 from app.api.v1.endpoints.auth import router as auth_router
 from app.services.temp_session_service import TempSessionService
 from app.services.auth_service import AuthService
+from app.services.embedding_service import EmbeddingService
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -80,6 +81,16 @@ async def startup_event():
     # ✅ MongoDB 인덱스 초기화
     await TempSessionService.initialize_indexes()
     await AuthService().initialize_indexes()
+    
+    # ✅ 임베딩 서비스 초기화
+    logger.info("Initializing embedding service...")
+    try:
+        await EmbeddingService.initialize()
+        logger.info("Embedding service initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize embedding service: {str(e)}", exc_info=True)
+        logger.warning("Application will continue, but embedding-based search may not work properly")
+    
     logger.info("Application startup complete")
 
 if __name__ == "__main__":

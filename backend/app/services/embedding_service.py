@@ -18,6 +18,7 @@ class EmbeddingService:
     _embeddings = None
     _data = None
     _is_initialized = False
+    _all_muscles = None  # 메타데이터에 정의된 모든 근육 목록
     
     @classmethod
     async def initialize(cls):
@@ -30,7 +31,7 @@ class EmbeddingService:
             
             # 1. 데이터 파일 경로 설정
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            data_path = os.path.join(base_dir, "data", "final_data.json")
+            data_path = os.path.join(base_dir, "data", "data.json")
             embeddings_path = os.path.join(base_dir, "data", "embeddings.json")
             
             # 2. 데이터 로드
@@ -46,6 +47,19 @@ class EmbeddingService:
             # 4. 모델 로드
             logger.info("LaBSE 모델 로드 중...")
             cls._model = SentenceTransformer('sentence-transformers/LaBSE')
+            
+            # 5. 메타데이터에서 모든 근육 목록 가져오기
+            front_muscles = cls._data['metadata'].get('front_muscles', [])
+            back_muscles = cls._data['metadata'].get('back_muscles', [])
+            cls._all_muscles = list(set(front_muscles + back_muscles))  # 중복 제거
+            
+            logger.info(f"메타데이터에 정의된 총 근육 수: {len(cls._all_muscles)}")
+            logger.info(f"실제 데이터에 있는 근육 수: {len(cls._data.get('muscles', {}))}")
+            
+            # 누락된 근육 정보 출력
+            missing_muscles = [m for m in cls._all_muscles if m not in cls._data.get("muscles", {})]
+            if missing_muscles:
+                logger.warning(f"다음 {len(missing_muscles)}개 근육에 대한 데이터가 없습니다: {', '.join(missing_muscles)}")
             
             cls._is_initialized = True
             logger.info(f"임베딩 서비스 초기화 완료! 총 {len(cls._embeddings)} 개의 임베딩 로드됨")
@@ -115,7 +129,27 @@ class EmbeddingService:
         # 4. 유사도 기준 정렬
         results.sort(key=lambda x: x["similarity"], reverse=True)
         
-        # 5. 상위 k개 결과 반환
+        # 5. 결과가 없거나 부족한 경우 처리
+        if len(results) < top_k:
+            logger.warning(f"검색 결과가 부족합니다: {len(results)}개 (요청: {top_k}개)")
+            
+            # 기본 응답 추가
+            if len(results) == 0:
+                logger.info("기본 응답 추가 중...")
+                # 데이터가 있는 근육에서 기본 응답 추가
+                for muscle_name, muscle_data in cls._data.get("muscles", {}).items():
+                    for i, exercise in enumerate(muscle_data.get("exercises", [])):
+                        results.append({
+                            "similarity": 0.5,  # 기본 유사도
+                            "muscle": muscle_name,
+                            "exercise": exercise
+                        })
+                        if len(results) >= top_k:
+                            break
+                    if len(results) >= top_k:
+                        break
+        
+        # 6. 상위 k개 결과 반환
         return results[:top_k]
     
     @classmethod
