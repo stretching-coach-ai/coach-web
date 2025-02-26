@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Stardust } from '../fonts';
-import { Gnb } from '@/components/gnb';
+import { Gnb } from '@/components/Gnb';
 import { Fnb } from '@/components/Fng';
 
 export default function ChatUI() {
