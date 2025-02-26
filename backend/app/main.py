@@ -48,7 +48,7 @@ app = FastAPI(
 # CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 실제 운영환경에서는 구체적인 origin을 지정해야 함
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -78,6 +78,16 @@ async def startup_event():
     logger.info("Starting up the application...")
     # ✅ 데이터베이스 초기화
     MongoManager.initialize_db()
+    
+    # MongoDB 클라이언트 초기화
+    try:
+        # MongoDB 연결 초기화 추가
+        await MongoManager.initialize()
+        logger.info("MongoDB connection initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize MongoDB connection: {str(e)}", exc_info=True)
+        logger.warning("Application will continue, but database operations may not work properly")
+    
     # ✅ MongoDB 인덱스 초기화
     await TempSessionService.initialize_indexes()
     await AuthService().initialize_indexes()
