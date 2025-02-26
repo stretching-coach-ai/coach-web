@@ -37,7 +37,10 @@ const FormSchema = z.object({
   }),
 });
 
-export const UserInfoForm = () => {
+type Props = {
+  onDotButtonClick: (index: number) => void;
+};
+export const UserInfoForm = ({ onDotButtonClick }: Props) => {
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -51,6 +54,7 @@ export const UserInfoForm = () => {
 
   const onSubmit = (values: z.infer<typeof FormSchema>) => {
     console.log(values);
+    onDotButtonClick(0);
   };
 
   return (
@@ -157,7 +161,7 @@ export const UserInfoForm = () => {
             />
 
             <Button
-              type="submit"
+              type="button"
               variant="main"
               size="main"
               // disabled={
@@ -166,6 +170,7 @@ export const UserInfoForm = () => {
               //   !form.watch('dailyRoutine')
               // }
               disabled={!form.formState.isValid}
+              onClick={() => onDotButtonClick(1)}
             >
               다 입력했어요
             </Button>
