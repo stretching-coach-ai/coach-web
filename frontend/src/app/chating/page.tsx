@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Stardust } from '../fonts';
+import { Gnb } from '@/components/gnb';
+import { Fnb } from '@/components/Fng';
 
 export default function ChatUI() {
   const [messages, setMessages] = useState([
@@ -27,42 +29,51 @@ export default function ChatUI() {
   }, [messages]);
 
   return (
-    <div className="flex flex-col h-screen p-5">
-      {/* 채팅 메시지 영역 */}
+    <main className="max-w-md flex flex-col items-start m-auto">
+      <Gnb></Gnb>
       <div
-        className={`${Stardust.className} flex-1 overflow-y-auto p-2 space-y-[42px]`}
+        className="w-full flex flex-col h-screen p-5 mt-[72px]"
+        style={{ height: 'calc(100vh - 126px)' }}
       >
-        {messages.map((msg) => (
-          <div className={`flex ${msg.sender === 'user' ? 'justify-end' : ''}`}>
+        {/* 채팅 메시지 영역 */}
+        <div
+          className={`${Stardust.className} flex-1 overflow-y-auto p-2 space-y-[42px]`}
+        >
+          {messages.map((msg) => (
             <div
-              key={msg.id}
-              className={`p-3 max-w-xs w-fit ${
-                msg.sender === 'user'
-                  ? 'bg-[#E4FFA9] self-end rounded-[15px] rounded-tr-[0px] flex justify-end text-[24px]'
-                  : 'bg-[#F7FFE5] self-start rounded-[15px] rounded-tl-[0px] text-[24px]'
-              }`}
+              className={`flex ${msg.sender === 'user' ? 'justify-end' : ''}`}
             >
-              {msg.text}
+              <div
+                key={msg.id}
+                className={`p-3 max-w-xs w-fit ${
+                  msg.sender === 'user'
+                    ? 'bg-[#E4FFA9] self-end rounded-[15px] rounded-tr-[0px] flex justify-end text-[24px]'
+                    : 'bg-[#F7FFE5] self-start rounded-[15px] rounded-tl-[0px] text-[24px]'
+                }`}
+              >
+                {msg.text}
+              </div>
             </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
 
-      {/* 입력창 */}
-      <div className="flex items-center p-3 pl-[35px] bg-[#E4FFA8] rounded-full text-[19px]">
-        <input
-          type="text"
-          className="flex-1 focus:outline-none bg-transparent"
-          placeholder="꾸부기에게 궁금한 거 물어보기"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-        />
+        {/* 입력창 */}
+        <div className="flex items-center p-3 pl-[35px] bg-[#E4FFA8] rounded-full text-[19px]">
+          <input
+            type="text"
+            className="flex-1 focus:outline-none bg-transparent"
+            placeholder="꾸부기에게 궁금한 거 물어보기"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+          />
+        </div>
+        <p className="text-[10px] mx-auto mt-[9px]">
+          꾸부기는 실수를 할 수 있습니다. 중요한 정보를 확인하세요.
+        </p>
       </div>
-      <p className="text-[10px] mx-auto mt-[9px]">
-        꾸부기는 실수를 할 수 있습니다. 중요한 정보를 확인하세요.
-      </p>
-    </div>
+      <Fnb></Fnb>
+    </main>
   );
 }
