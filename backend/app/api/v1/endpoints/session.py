@@ -214,3 +214,53 @@ async def create_stretching_session_stream(
     except Exception as e:
         logger.error(f"Error in create_stretching_session_stream: {str(e)}", exc_info=True)
         raise
+
+@router.get("/muscles")
+async def get_all_muscles():
+    """모든 근육 목록 조회"""
+    try:
+        # 임베딩 서비스 초기화 확인
+        await EmbeddingService.initialize()
+        
+        # 메타데이터에서 근육 목록 가져오기
+        all_muscles = EmbeddingService._all_muscles
+        
+        # 근육 데이터 구조화
+        result = {
+            "total": len(all_muscles),
+            "muscles": all_muscles
+        }
+        
+        return result
+    except Exception as e:
+        logger.error(f"Error in get_all_muscles: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/muscles/{muscle_name}/exercises")
+async def get_muscle_exercises(muscle_name: str):
+    """특정 근육의 스트레칭 운동 조회"""
+    try:
+        # 임베딩 서비스 초기화 확인
+        await EmbeddingService.initialize()
+        
+        # 데이터에서 해당 근육 정보 가져오기
+        muscles_data = EmbeddingService._data.get("muscles", {})
+        
+        if muscle_name not in muscles_data:
+            raise HTTPException(status_code=404, detail=f"Muscle '{muscle_name}' not found")
+        
+        muscle_info = muscles_data[muscle_name]
+        
+        # 결과 구조화
+        result = {
+            "muscle": muscle_name,
+            "english": muscle_info.get("info", {}).get("english", ""),
+            "exercises": muscle_info.get("exercises", [])
+        }
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in get_muscle_exercises: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
