@@ -69,50 +69,46 @@ app.include_router(
 
 app.include_router(
     auth_router,
-    prefix=f"{settings.API_V1_PREFIX}/auth",
+    prefix=settings.API_V1_PREFIX,
     tags=["auth"]
 )
 
 @app.on_event("startup")
 async def startup_event():
-    logger.info("Starting up the application...")
-    # ✅ 데이터베이스 초기화
-    MongoManager.initialize_db()
+    """애플리케이션 시작 시 실행되는 이벤트 핸들러"""
+    logger.info("🚀 Starting application...")
     
-    # MongoDB 클라이언트 초기화
-    try:
-        # MongoDB 연결 초기화 추가
-        await MongoManager.initialize()
-        logger.info("MongoDB connection initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize MongoDB connection: {str(e)}", exc_info=True)
-        logger.warning("Application will continue, but database operations may not work properly")
+    # MongoDB 연결
+    logger.info("📊 Connecting to MongoDB...")
+    await MongoManager.connect()
+    logger.info("✅ MongoDB connected successfully")
     
-    # ✅ MongoDB 인덱스 초기화
+    # 인덱스 초기화
+    logger.info("🔍 Initializing indexes...")
     await TempSessionService.initialize_indexes()
     await AuthService().initialize_indexes()
+    logger.info("✅ Indexes initialized successfully")
     
-    # ✅ 임베딩 서비스 초기화
-    logger.info("Initializing embedding service...")
-    try:
-        await EmbeddingService.initialize()
-        logger.info("Embedding service initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize embedding service: {str(e)}", exc_info=True)
-        logger.warning("Application will continue, but embedding-based search may not work properly")
+    # 임베딩 서비스 초기화
+    logger.info("🧠 Initializing embedding service...")
+    await EmbeddingService.initialize()
+    logger.info("✅ Embedding service initialized successfully")
     
-    logger.info("Application startup complete")
+    logger.info("✨ Application startup complete")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """애플리케이션 종료 시 실행되는 이벤트 핸들러"""
+    logger.info("🛑 Shutting down application...")
+    
+    # MongoDB 연결 종료
+    logger.info("📊 Closing MongoDB connection...")
+    await MongoManager.close()
+    logger.info("✅ MongoDB connection closed successfully")
+    
+    logger.info("👋 Application shutdown complete")
 
 if __name__ == "__main__":
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        workers=4,  # CPU 코어 수에 따라 조정
-        limit_concurrency=100,  # 동시 연결 제한
-        backlog=2048,  # 연결 대기열 크기
-        timeout_keep_alive=5,  # Keep-alive 타임아웃
-        log_level="info"
-    )
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
 
 

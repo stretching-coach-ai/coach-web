@@ -20,12 +20,7 @@ class StretchingSession(BaseModel):
                     "age": 28,
                     "gender": "여성",
                     "occupation": "사무직 회사원",
-                    "lifestyle": {
-                        "work_hours": 9,
-                        "sitting_hours": 8,
-                        "exercise_frequency": 1,
-                        "sleep_hours": 6
-                    },
+                    "lifestyle": "주 5일 근무, 하루 8시간 앉아서 일하고, 주 1회 운동, 하루 6시간 수면",
                     "selected_body_parts": "목, 어깨",
                     "pain_level": 7,
                     "pain_description": "장시간 컴퓨터 작업으로 인한 목과 어깨 통증이 심하고, 특히 오른쪽 어깨가 뻐근하고 움직일 때 불편함"
@@ -35,11 +30,13 @@ class StretchingSession(BaseModel):
             }
         }
 
+# 멀티톤 방식으로 세션 구조 변경
 class SessionBase(BaseModel):
     """임시 세션 기본 모델"""
     session_id: str = Field(..., description="세션 고유 식별자")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="세션 생성 시간")
     expires_at: datetime = Field(..., description="세션 만료 시간")
+    # 여러 스트레칭 세션 저장
     stretching_sessions: List[StretchingSession] = Field(default_factory=list, description="스트레칭 세션 목록")
 
 class SessionCreate(BaseModel):
@@ -62,12 +59,7 @@ class SessionResponse(SessionBase):
                             "age": 28,
                             "gender": "여성",
                             "occupation": "사무직 회사원",
-                            "lifestyle": {
-                                "work_hours": 9,
-                                "sitting_hours": 8,
-                                "exercise_frequency": 1,
-                                "sleep_hours": 6
-                            },
+                            "lifestyle": "주 5일 근무, 하루 8시간 앉아서 일하고, 주 1회 운동, 하루 6시간 수면",
                             "selected_body_parts": "목, 어깨",
                             "pain_level": 7,
                             "pain_description": "장시간 컴퓨터 작업으로 인한 목과 어깨 통증이 심하고, 특히 오른쪽 어깨가 뻐근하고 움직일 때 불편함"

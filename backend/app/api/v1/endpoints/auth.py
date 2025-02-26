@@ -12,14 +12,14 @@ auth_service = AuthService()
 async def register(
     user_data: UserCreate,
     response: Response,
-    session_id: Optional[str] = Cookie(None)
+    session_cookie: Optional[str] = Cookie(None, alias="session_id")
 ):
     """회원가입 API - 기존 세션 데이터가 있다면 자동으로 연동됨"""
     try:
         user = await auth_service.register(
             user_data.email,
             user_data.password,
-            session_id
+            session_cookie
         )
         
         # 회원가입 성공 시 자동 로그인
@@ -46,14 +46,14 @@ async def register(
 async def login(
     credentials: LoginCredentials,
     response: Response,
-    session_id: Optional[str] = Cookie(None)
+    session_cookie: Optional[str] = Cookie(None, alias="session_id")
 ):
     """로그인 API - 기존 세션이 있다면 연동"""
     try:
         user, new_session_id = await auth_service.login(
             credentials.email,
             credentials.password,
-            session_id
+            session_cookie
         )
         
         response.set_cookie(
@@ -77,23 +77,23 @@ async def login(
 @router.post("/logout")
 async def logout(
     response: Response,
-    session_id: Optional[str] = Cookie(None)
+    session_cookie: Optional[str] = Cookie(None, alias="session_id")
 ):
     """로그아웃 API"""
-    if session_id:
-        await auth_service.logout(session_id)
+    if session_cookie:
+        await auth_service.logout(session_cookie)
     response.delete_cookie("session_id")
     return {"message": "Logged out successfully"}
 
 @router.get("/me", response_model=AuthResponse)
 async def get_current_user(
-    session_id: Optional[str] = Cookie(None)
+    session_cookie: Optional[str] = Cookie(None, alias="session_id")
 ):
     """현재 로그인한 사용자 정보 조회 API"""
-    if not session_id:
+    if not session_cookie:
         return AuthResponse(is_authenticated=False)
     
-    user = await auth_service.validate_session(session_id)
+    user = await auth_service.validate_session(session_cookie)
     return AuthResponse(
         is_authenticated=bool(user),
         user=user
