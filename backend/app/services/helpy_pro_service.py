@@ -19,7 +19,7 @@ logger.setLevel(logging.DEBUG)
 class HelpyProService:
     """Helpy Pro API와의 통신을 담당하는 서비스 클래스"""
 
-    API_URL = "https://api-cloud-function.elice.io/9f071d94-a459-429d-a375-9601e521b079"
+    API_URL = settings.HELPY_PRO_API_URL
     API_KEY = settings.HELPY_PRO_API_KEY
     MAX_TOKENS = 2048
     
