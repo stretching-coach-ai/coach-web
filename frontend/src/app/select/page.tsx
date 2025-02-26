@@ -1,34 +1,45 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import Image from 'next/image';
-import Link from 'next/link';
 import { StardustBold } from '../fonts';
 import { Stardust } from '../fonts';
+import Link from 'next/link';
 
 const select = () => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-  const [isBtnEnabled, setIsBtnEnabled] = useState(false);
+  //비회원로그인
+  const handleGuestLoging = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/v1/sessions/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setName(e.target.value);
-  };
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEmail(e.target.value);
-  };
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPassword(e.target.value);
+      if (!response.ok) {
+        throw new Error('세션생성 실패');
+      }
+
+      const data = await response.json();
+      console.log('세션생성 성공:', data);
+      router.push('/onboarding');
+    } catch (error) {
+      console.error('비회원 세션 생성 중 오류 발생:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <main>
-      <article className="mt-9 flex flex-col justify-center items-center">
+    <main className="max-w-md flex flex-col items-start m-auto">
+      <article className="mx-auto mt-9 flex flex-col justify-center items-center">
         <div>
           <p className={`${StardustBold.className} text-[#689700] text-[32px]`}>
             이거 뭐라고하지
@@ -54,17 +65,27 @@ const select = () => {
           </div>
           <div className={`${Stardust.className} mt-[86px]`}>
             <Button variant="main" size="main" className="text-[18px]">
-              로그인
+              <Link className="w-full" href="/login">
+                로그인
+              </Link>
             </Button>
-            <Button variant="main" size="main" className="text-[18px] my-9">
-              비로그인
+            <Button
+              variant="main"
+              size="main"
+              className="text-[18px] my-9"
+              onClick={handleGuestLoging}
+              disabled={loading}
+            >
+              {loading ? '...로딩중' : '비로그인'}
             </Button>
             <Button
               variant="main"
               size="main"
               className="text-[18px] bg-[#9EBC5A] text-white"
             >
-              회원가입
+              <Link className="w-full" href="/signup">
+                회원가입
+              </Link>
             </Button>
           </div>
         </div>
