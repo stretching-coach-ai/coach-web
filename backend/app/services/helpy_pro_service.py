@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, AsyncGenerator
 import httpx
 import logging
 from fastapi import HTTPException
@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.schemas.user_input import UserInput
-from app.schemas.ai_response import AIResponse
+from app.schemas.ai_response import AIResponse, StreamingAIResponse
 from app.services.embedding_service import EmbeddingService
 
 # 로거 설정
@@ -48,7 +48,7 @@ class HelpyProService:
             raise
 
     @classmethod
-    def _create_optimized_prompt(cls, user_input: UserInput, relevant_exercises: List[Dict[str, Any]] = None) -> str:
+    def _create_prompt(cls, user_input: UserInput, relevant_exercises: List[Dict[str, Any]] = None) -> str:
         """최적화된 스트레칭 가이드 생성을 위한 프롬프트"""
         
         # 사용자 기본 정보 포함
@@ -193,7 +193,7 @@ class HelpyProService:
                 logger.info(f"Generating stretching guide for session_id: {session_id}")
                 
                 # 프롬프트 생성 - 최적화된 프롬프트 메서드 사용
-                prompt = cls._create_optimized_prompt(user_input, relevant_exercises)
+                prompt = cls._create_prompt(user_input, relevant_exercises)
                 logger.debug(f"Generated optimized prompt length: {len(prompt)} characters")
                 logger.debug(f"Prompt first 300 chars: {prompt[:300]}...")
                 logger.debug(f"Prompt last 300 chars: {prompt[-300:]}...")
@@ -331,7 +331,6 @@ JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를
 
 응답 형식:
 [분석]
-<CURRENT_CURSOR_POSITION>
 - 상태: (사용자의 현재 상태 분석)
 - 위험: (지속될 경우의 위험 요소)
 - 개선점: (개선을 위한 방향)
@@ -503,4 +502,208 @@ JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를
             logger.error(f"Exception type: {type(e).__name__}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
-            return "오류가 발생했습니다. 다시 시도해주세요." 
+            return "오류가 발생했습니다. 다시 시도해주세요."
+
+    @classmethod
+    async def generate_stretching_guide_stream(
+        cls, 
+        session_id: str,
+        user_input: UserInput,
+        relevant_exercises: List[Dict[str, Any]] = None
+    ) -> AsyncGenerator[StreamingAIResponse, None]:
+        """스트레칭 가이드 생성 (스트리밍 방식)"""
+        try:
+            logger.info(f"Generating streaming stretching guide for session: {session_id}")
+            
+            # 사용자 입력 및 관련 운동 정보를 기반으로 프롬프트 생성
+            prompt = cls._create_prompt(user_input, relevant_exercises)
+            
+            # 기본 응답 생성 (API 호출 실패 시 사용)
+            default_response = cls._generate_default_response(user_input)
+            default_first_line = default_response.split('\n')[0] if default_response else ""
+            
+            # 헤더 설정
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {cls.API_KEY}"
+            }
+            
+            # 세마포어를 사용하여 동시 요청 제한
+            async with cls._semaphore:
+                logger.info(f"Acquired semaphore for session: {session_id}")
+                
+                # 캐시 방지를 위한 타임스탬프 추가
+                cache_buster = str(int(time.time()))
+                
+                # API 요청 데이터 준비
+                request_data = {
+                    "model": "helpy-pro",
+                    "sess_id": f"{session_id}_{cache_buster}",
+                    "temperature": 0.3,
+                    "max_tokens": 1500,
+                    "stream": True,  # 스트리밍 활성화
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": """당신은 스트레칭 전문가이자 물리치료사입니다. 
+JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를 활용해 분석과 가이드를 제공하세요.
+
+다음 원칙을 따라주세요:
+1. 제공된 메타데이터를 최대한 활용하여 상세하고 정확한 스트레칭 가이드를 작성하세요.
+2. 학술적 근거가 있는 경우 반드시 포함하고 출처를 명시하세요.
+3. 사용자의 상태, 직업, 생활 습관을 고려한 맞춤형 가이드를 제공하세요.
+4. 각 스트레칭 동작에 대해 단계별 지침, 호흡법, 반복 횟수를 명확히 설명하세요.
+5. 필요한 경우 Google 검색 기능을 사용하여 추가 정보를 찾으세요.
+6. 참고 자료 섹션에 사용된 학술 자료나 스트레칭 정보의 출처 URL을 포함하세요.
+
+응답 형식:
+[분석]
+- 상태: (사용자의 현재 상태 분석)
+- 위험: (지속될 경우의 위험 요소)
+- 개선점: (개선을 위한 방향)
+
+[가이드]
+- 스트레칭: (구체적인 스트레칭 방법 3-5개)
+- 생활수칙: (일상생활에서의 개선 방법)
+- 주의사항: (스트레칭 시 주의할 점)
+
+[참고 자료]
+- (사용된 학술 자료 및 출처 URL)"""
+                        },
+                        {
+                            "role": "user",
+                            "content": f"{prompt}\n\n(timestamp: {cache_buster})"
+                        }
+                    ],
+                    "tools": [
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": "search_google_for_query",
+                                "description": "Search Google for additional information about stretching exercises, medical conditions, or scientific evidence",
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {
+                                        "query": {
+                                            "type": "string",
+                                            "description": "The search query"
+                                        }
+                                    },
+                                    "required": ["query"]
+                                }
+                            }
+                        }
+                    ],
+                    "response_format": {"type": "text"}
+                }
+                
+                # API 키가 비어있는지 확인
+                if not cls.API_KEY:
+                    logger.error("API key is empty. Please set HELPY_PRO_API_KEY in environment variables.")
+                    yield StreamingAIResponse(content="API 키가 설정되지 않았습니다. 관리자에게 문의하세요.", done=True)
+                    return
+                
+                # API URL 확인
+                if not cls.API_URL or not cls.API_URL.startswith("http"):
+                    logger.error(f"Invalid API URL: {cls.API_URL}")
+                    yield StreamingAIResponse(content="API URL이 올바르지 않습니다. 관리자에게 문의하세요.", done=True)
+                    return
+                
+                # 헤더에 API 키 설정
+                api_headers = {
+                    "accept": "application/json",
+                    "content-type": "application/json",
+                    "authorization": f"Bearer {cls.API_KEY}",
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0"
+                }
+                
+                try:
+                    logger.info(f"Starting streaming API request for session: {session_id}")
+                    
+                    async with cls.get_client() as client:
+                        async with client.stream(
+                            "POST",
+                            f"{cls.API_URL}/v1/chat/completions?cache_buster={cache_buster}",
+                            json=request_data,
+                            headers=api_headers,
+                            timeout=60.0
+                        ) as response:
+                            if response.status_code != 200:
+                                error_content = await response.aread()
+                                logger.error(f"API Error: {response.status_code}, Content: {error_content.decode('utf-8')}")
+                                yield StreamingAIResponse(
+                                    content=f"서버 오류 ({response.status_code}). 다시 시도해주세요.",
+                                    done=True
+                                )
+                                return
+                            
+                            # 스트리밍 응답 처리
+                            buffer = ""
+                            async for chunk in response.aiter_bytes():
+                                try:
+                                    chunk_text = chunk.decode('utf-8')
+                                    
+                                    # 청크가 여러 줄로 구성된 경우 각 줄을 개별적으로 처리
+                                    lines = chunk_text.split('\n')
+                                    for line in lines:
+                                        line = line.strip()
+                                        if not line:
+                                            continue
+                                        
+                                        # "data: " 접두사 제거
+                                        if line.startswith('data: '):
+                                            line = line[6:]
+                                        
+                                        # 스트림 종료 확인
+                                        if line == '[DONE]':
+                                            logger.info("Stream completed")
+                                            yield StreamingAIResponse(content="", done=True)
+                                            continue
+                                        
+                                        try:
+                                            data = json.loads(line)
+                                            if 'choices' in data and len(data['choices']) > 0:
+                                                delta = data['choices'][0].get('delta', {})
+                                                content = delta.get('content', '')
+                                                
+                                                if content:
+                                                    # 타임스탬프 제거
+                                                    if f"timestamp: {cache_buster}" in content:
+                                                        content = content.replace(f"timestamp: {cache_buster}", "").strip()
+                                                    
+                                                    buffer += content
+                                                    yield StreamingAIResponse(content=content, done=False)
+                                        except json.JSONDecodeError:
+                                            logger.warning(f"Failed to parse JSON from chunk: {line}")
+                                            continue
+                                except Exception as e:
+                                    logger.error(f"Error processing chunk: {str(e)}")
+                                    continue
+                            
+                            # 스트림이 정상적으로 종료되지 않은 경우 완료 신호 전송
+                            yield StreamingAIResponse(content="", done=True)
+                            
+                            # 전체 응답 로깅
+                            logger.info(f"Completed streaming response, total length: {len(buffer)}")
+                            
+                            # 응답 저장을 위해 전체 텍스트 반환 (return 문 제거)
+                            # return buffer
+                
+                except httpx.ReadTimeout:
+                    logger.error("API request read timeout")
+                    yield StreamingAIResponse(content="API 응답 대기 시간이 초과되었습니다. 다시 시도해주세요.", done=True)
+                except httpx.ConnectTimeout:
+                    logger.error("API connection timeout")
+                    yield StreamingAIResponse(content="API 연결 시간이 초과되었습니다. 다시 시도해주세요.", done=True)
+                except httpx.RequestError as e:
+                    logger.error(f"Request error: {str(e)}")
+                    yield StreamingAIResponse(content=f"API 요청 오류: {str(e)}. 다시 시도해주세요.", done=True)
+                except Exception as e:
+                    logger.error(f"Unexpected error in streaming: {str(e)}", exc_info=True)
+                    yield StreamingAIResponse(content="오류가 발생했습니다. 다시 시도해주세요.", done=True)
+        
+        except Exception as e:
+            logger.error(f"Error in generate_stretching_guide_stream: {str(e)}", exc_info=True)
+            yield StreamingAIResponse(content="오류가 발생했습니다. 다시 시도해주세요.", done=True) 

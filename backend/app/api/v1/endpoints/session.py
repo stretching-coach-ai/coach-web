@@ -1,12 +1,14 @@
 from uuid import uuid4
 import logging
 from fastapi import APIRouter, Response, HTTPException, Cookie
+from fastapi.responses import StreamingResponse
 from app.services.temp_session_service import TempSessionService
 from app.services.helpy_pro_service import HelpyProService
 from app.schemas.user_input import UserInput
-from app.schemas.ai_response import AIResponse
+from app.schemas.ai_response import AIResponse, StreamingAIResponse
 from app.schemas.session import StretchingSession
 from app.services.embedding_service import EmbeddingService
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -109,3 +111,81 @@ async def update_stretching_feedback(
         raise HTTPException(status_code=404, detail="Session or stretching session not found")
     
     return {"status": "success"}
+
+@router.post("/sessions/{session_id}/stretching/stream")
+async def create_stretching_session_stream(
+    session_id: str,
+    user_input: UserInput
+):
+    """새로운 스트레칭 세션 생성 및 AI 가이드 생성 (스트리밍 방식)"""
+    try:
+        logger.info(f"Creating streaming stretching session for session_id: {session_id}")
+        logger.debug(f"User input: {user_input.dict()}")
+        
+        # 0. 임베딩 서비스 초기화 확인
+        await EmbeddingService.initialize()
+        
+        # 1. 임베딩 검색으로 관련 스트레칭 찾기
+        logger.info("Searching for relevant stretching exercises")
+        body_parts = [part.strip() for part in user_input.selected_body_parts.split(',')]
+        relevant_exercises = await EmbeddingService.search(
+            query=user_input.pain_description,
+            body_parts=body_parts,
+            occupation=user_input.occupation,
+            top_k=3
+        )
+        
+        logger.info(f"Found {len(relevant_exercises)} relevant exercises")
+        
+        # 2. 세션에 스트레칭 기록 추가
+        logger.info("Adding stretching session to database")
+        updated_session = await TempSessionService.add_stretching_session(
+            session_id=session_id,
+            user_input=user_input
+        )
+        
+        if not updated_session:
+            logger.error(f"Session not found: {session_id}")
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # 3. 생성된 스트레칭 세션의 ID 찾기
+        latest_stretching = updated_session.stretching_sessions[-1]
+        stretching_id = latest_stretching.id
+        logger.info(f"Created stretching session with ID: {stretching_id}")
+        
+        # 4. 스트리밍 응답 생성 함수
+        async def generate_stream():
+            full_response = ""
+            
+            # 스트리밍 응답 생성
+            async for chunk in HelpyProService.generate_stretching_guide_stream(
+                session_id=session_id,
+                user_input=user_input,
+                relevant_exercises=relevant_exercises
+            ):
+                # 응답 형식 변환 (JSON 문자열로)
+                yield f"data: {json.dumps(chunk.dict())}\n\n"
+                
+                # 전체 응답 누적
+                if chunk.content:
+                    full_response += chunk.content
+                
+                # 스트리밍이 완료되면 데이터베이스에 저장
+                if chunk.done and full_response:
+                    # AI 응답 저장
+                    logger.info("Updating stretching AI response")
+                    await TempSessionService.update_stretching_ai_response(
+                        session_id=session_id,
+                        stretching_id=stretching_id,
+                        ai_response=full_response
+                    )
+        
+        # 5. 스트리밍 응답 반환
+        return StreamingResponse(
+            generate_stream(),
+            media_type="text/event-stream"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in create_stretching_session_stream: {str(e)}", exc_info=True)
+        raise
