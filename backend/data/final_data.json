@@ -1,0 +1,495 @@
+{
+  "metadata": {
+    "total_items": 2,
+    "front_muscles": [
+      "대흉근",
+      "흉쇄유돌근",
+      "복직근",
+      "외복사근",
+      "내전근",
+      "대퇴직근",
+      "외측광근",
+      "내측광근",
+      "봉공근",
+      "전경골근"
+    ],
+    "back_muscles": [
+      "대둔근",
+      "광배근",
+      "단두",
+      "장두",
+      "비복근",
+      "반건양근",
+      "삼각근",
+      "삼두근",
+      "전완근",
+      "승모근",
+      "내전근"
+    ],
+    "collection_date": "2025-02-26T18:16:48.904010",
+    "data_sources": [
+      "PubMed",
+      "KoreaMed",
+      "JOSPT"
+    ],
+    "enhanced_date": "2025-02-26T18:16:48.904015",
+    "enhanced_items": 1,
+    "enhancement_model": "gpt-4o-mini"
+  },
+  "muscles": {
+    "대흉근": {
+      "info": {
+        "english": "pectoralis major",
+        "keywords_ko": [
+          "대흉근 스트레칭",
+          "가슴 스트레칭",
+          "가슴 운동",
+          "자세교정"
+        ],
+        "keywords_en": [
+          "pectoralis major stretching",
+          "chest stretching",
+          "posture correction"
+        ],
+        "common_issues": [
+          "라운드숄더",
+          "거북목",
+          "가슴 통증"
+        ],
+        "occupations": [
+          "사무직",
+          "학생",
+          "프로그래머"
+        ]
+      },
+      "exercises": [
+        {
+          "source": "pubmed",
+          "muscle": "대흉근",
+          "title": "Is there an immediate effect on pectoralis minor length after performing a prone scapular retraction exercise using typical sets and repetitions in pain-free participants?",
+          "abstract": "Pectoralis Minor (PM) length shortening may contribute to faulty scapular. kinematics and result in shoulder pathology.of the Study: To evaluate if a prone scapular retraction exercise will demonstrate an immediate lengthening of the pectoralis minor (PM) in healthy participants.50 healthy participants were measured to determine the length of their PM. The participants then performed three sets of 10 repetitions of a prone scapular retraction exercise. Next, the participants had their PM length measured again to see if there was an immediate change in PM length.PM length was not found to significantly lengthen immediately after the prone scapular retraction exercise. The mean PM length increased by 0.243 cm after the exercise but this was less than the MDC95 of 0.63 cm so the difference does not represent a real alteration in PM length.The hypothesis was that due to the theory of reciprocal inhibition, the PM would increase in length after the exercise. This study does not support this hypothesis. This study suggests that to improve PM length the PM needs to be subjected to more time at a lengthened position than what was afforded by our exercise.This study demonstrated that three sets of 10 repetitions of a prone scapular retraction exercise did not significantly change the PM length. If this exercise is being implemented to increase the PM length it should be used after a stretch of the PM.Copyright © 2024 Elsevier Ltd. All rights reserved.",
+          "protocol": {
+            "preparation": [],
+            "steps": [
+              "kinematics and result in shoulder pathology.of the Study: To evaluate if a prone scapular retraction exercise will demonstrate an immediate lengthening of the pectoralis minor (PM) in healthy participants.50 healthy participants were measured to determine the length of their PM",
+              "The participants then performed three sets of 10 repetitions of a prone scapular retraction exercise",
+              "Next, the participants had their PM length measured again to see if there was an immediate change in PM length.PM length was not found to significantly lengthen immediately after the prone scapular retraction exercise",
+              "The mean PM length increased by 0.243 cm after the exercise but this was less than the MDC95 of 0.63 cm so the difference does not represent a real alteration in PM length.The hypothesis was that due to the theory of reciprocal inhibition, the PM would increase in length after the exercise",
+              "This study suggests that to improve PM length the PM needs to be subjected to more time at a lengthened position than what was afforded by our exercise.This study demonstrated that three sets of 10 repetitions of a prone scapular retraction exercise did not significantly change the PM length",
+              "If this exercise is being implemented to increase the PM length it should be used after a stretch of the PM.Copyright © 2024 Elsevier Ltd"
+            ],
+            "variations": [],
+            "precautions": [],
+            "evidence_level": "",
+            "recommended_sets": "",
+            "recommended_frequency": ""
+          },
+          "evidence": {
+            "pmid": "39593406",
+            "url": "https://pubmed.ncbi.nlm.nih.gov/39593406/",
+            "publication_date": "2024-Oct"
+          },
+          "timestamp": "2025-02-26T18:16:48.904017",
+          "enhanced_metadata": {
+            "프로토콜_분석": {
+              "논문_제공_프로토콜": "대흉근의 길이를 평가하기 위해 50명의 건강한 참가자들이 측정 후, 3세트 10회 반복의 엎드린 어깨 후퇴 운동을 수행하고, 운동 후 다시 대흉근 길이를 측정하여 즉각적인 변화가 있는지 확인함.",
+              "과학적_근거": "운동 후 대흉근 길이가 평균 0.243cm 증가했으나, 이는 통계적으로 유의미한 변화가 아니며, 대흉근 길이를 늘리기 위해서는 더 오랜 시간 동안 늘어난 위치에 있어야 한다는 것을 제안함.",
+              "대상_조건": "50명의 건강한 참가자들로, 통증이 없는 상태에서 연구가 수행됨."
+            },
+            "스트레칭_상세화": {
+              "시작_자세": "바닥에 엎드린 자세로, 팔은 몸 옆에 두고 이마는 바닥에 대고 편안하게 놓음.",
+              "동작_단계": [
+                "1단계: 팔을 몸 옆에 두고 엎드린 자세를 유지합니다.",
+                "2단계: 어깨를 뒤로 당기며 가슴을 바닥에서 살짝 들어올립니다.",
+                "3단계: 팔꿈치를 구부려 팔을 몸 쪽으로 당깁니다.",
+                "4단계: 이 상태에서 5초간 유지합니다.",
+                "5단계: 천천히 원래 자세로 돌아옵니다."
+              ],
+              "호흡_패턴": [
+                "1단계: 자연스럽게 호흡합니다.",
+                "2단계: 숨을 들이마시며 어깨를 뒤로 당깁니다.",
+                "3단계: 숨을 내쉬며 팔꿈치를 구부립니다.",
+                "4단계: 유지하는 동안 호흡을 고르게 합니다.",
+                "5단계: 원래 자세로 돌아오며 숨을 내쉽니다."
+              ],
+              "느껴야_할_감각": "가슴과 어깨 부위의 긴장이 느껴지며, 이완된 느낌이 들어야 함.",
+              "시각적_큐": "거울을 통해 어깨가 뒤로 당겨진 모습과 가슴이 열리는 모습을 확인합니다."
+            },
+            "난이도_정보": {
+              "난이도_수준": "초급",
+              "연령대별_적합성": {
+                "10대": 8,
+                "20-30대": 9,
+                "40-50대": 7,
+                "60대_이상": 5
+              },
+              "체력_수준별_적합성": {
+                "낮음": 8,
+                "중간": 9,
+                "높음": 7
+              }
+            },
+            "실행_가이드라인": {
+              "권장_시간": "5초 유지",
+              "권장_횟수": "3세트",
+              "권장_빈도": "주 3-4회",
+              "강도_조절_방법": "자신의 유연성에 맞춰 팔을 당기는 정도를 조절합니다.",
+              "진행_방식": "초보자는 1세트부터 시작하여 점차 세트를 늘려갑니다."
+            },
+            "효과_및_적용": {
+              "주요_효과": [
+                "유연성 증가",
+                "통증 감소",
+                "근력 향상",
+                "자세 개선",
+                "어깨 안정성 증가"
+              ],
+              "효과_발현_시간": "단기(1-2주)",
+              "통증_완화_효과": {
+                "급성_통증": 5,
+                "만성_통증": 6,
+                "근육_긴장": 7,
+                "관절_통증": 4
+              },
+              "통증_강도별_적합성": {
+                "0-3": 8,
+                "4-6": 6,
+                "7-10": 4
+              }
+            },
+            "직업_관련성": {
+              "직업별_관련성_점수": {
+                "사무직": 9,
+                "서비스직": 6,
+                "육체노동": 5,
+                "운전직": 7,
+                "학생": 8,
+                "프로그래머": 9,
+                "디자이너": 8
+              },
+              "업무_환경_적용_방법": "사무실에서 앉아 있는 시간이 많은 직업군은 정기적으로 스트레칭을 통해 긴장을 풀어주는 것이 좋습니다.",
+              "직업_관련_증상_개선도": 7
+            },
+            "생활_패턴_적합성": {
+              "좌식_생활자_적합도": 9,
+              "활동적_생활자_적합도": 6,
+              "일상_활동_통합_방법": "업무 중간중간 짧은 스트레칭 시간을 가지며, 점심시간에 추가적인 스트레칭을 포함합니다."
+            },
+            "안전_및_주의사항": {
+              "금기사항": [
+                "어깨 부상 이력이 있는 경우",
+                "심한 통증이 있는 경우",
+                "최근 수술을 받은 경우"
+              ],
+              "수행_시_주의점": [
+                "무리한 힘을 주지 않도록 주의합니다.",
+                "통증이 느껴지면 즉시 중단합니다.",
+                "운동 전 충분한 준비 운동을 합니다."
+              ],
+              "중단해야_할_신호": [
+                "심한 통증 발생",
+                "어깨의 움직임 제한",
+                "어지러움 또는 불편함"
+              ]
+            },
+            "검색_및_추천용_태그": {
+              "증상_관련_태그": [
+                "어깨 통증",
+                "가슴 긴장",
+                "자세 불균형",
+                "근육 경직",
+                "유연성 부족"
+              ],
+              "직업_관련_태그": [
+                "사무직",
+                "프로그래머",
+                "학생",
+                "디자이너",
+                "서비스직"
+              ],
+              "상황_관련_태그": [
+                "장시간 앉기",
+                "운전 중",
+                "컴퓨터 작업",
+                "스마트폰 사용",
+                "스트레스"
+              ],
+              "효과_관련_태그": [
+                "유연성 증가",
+                "통증 완화",
+                "자세 개선",
+                "근력 향상",
+                "어깨 안정성",
+                "스트레스 감소",
+                "신체 기능 향상",
+                "운동 능력 향상"
+              ]
+            },
+            "통증_표현_매핑": {
+              "통증_표현_사전": {
+                "찌릿찌릿함": "신경통",
+                "뻐근함": "근육 긴장",
+                "화끈거림": "염증성 통증",
+                "당기는 느낌": "근육 경직",
+                "쑤시는 통증": "관절 통증",
+                "무거운 느낌": "근육 피로",
+                "타는 듯한 통증": "신경 손상",
+                "찌르는 느낌": "신경 압박",
+                "아픈 느낌": "통증",
+                "불편한 느낌": "긴장"
+              },
+              "통증_특성_키워드": [
+                "급성",
+                "만성",
+                "지속적",
+                "간헐적",
+                "신경성",
+                "근육성",
+                "관절성",
+                "염증성"
+              ]
+            },
+            "사용자_맞춤_정보": {
+              "통증_설명별_적합도": {
+                "어깨가 아파요": 8,
+                "가슴이 뻐근해요": 9,
+                "팔을 움직일 때 아파요": 7,
+                "자세가 불편해요": 8,
+                "운동 후 통증이 있어요": 6,
+                "장시간 앉아 있으면 아파요": 9,
+                "스트레스를 받으면 아파요": 7,
+                "가슴이 조여오는 느낌이 들어요": 8,
+                "팔이 저려요": 6,
+                "목이 뻐근해요": 7,
+                "어깨가 뻐근해요": 9,
+                "가슴 통증이 있어요": 5,
+                "팔이 무겁게 느껴져요": 6,
+                "자세가 틀어져 있는 것 같아요": 8,
+                "어깨가 뻐근하고 아파요": 9,
+                "가슴이 아프고 불편해요": 5
+              },
+              "통증_지속기간별_효과": {
+                "일시적": 8,
+                "단기": 7,
+                "중기": 6,
+                "장기": 5
+              },
+              "통증_강도별_권장_변형": {
+                "0-3": "기본 스트레칭",
+                "4-6": "강도를 낮춘 변형 스트레칭",
+                "7-10": "전문가의 지도 하에 진행"
+              }
+            },
+            "생성_방식": "protocol_based"
+          }
+        }
+      ]
+    },
+    "승모근": {
+      "info": {
+        "english": "trapezius",
+        "keywords_ko": [
+          "목 스트레칭",
+          "어깨 스트레칭",
+          "승모근 이완",
+          "자세교정"
+        ],
+        "keywords_en": [
+          "trapezius stretching",
+          "neck stretching",
+          "shoulder stretching",
+          "posture correction"
+        ],
+        "common_issues": [
+          "목 통증",
+          "어깨 결림",
+          "두통",
+          "거북목"
+        ],
+        "occupations": [
+          "사무직",
+          "학생",
+          "프로그래머",
+          "디자이너",
+          "운전기사"
+        ]
+      },
+      "exercises": [
+        {
+          "source": "manual",
+          "muscle": "승모근",
+          "title": "목 옆으로 스트레칭",
+          "abstract": "승모근 스트레칭은 목과 어깨의 긴장을 풀어주고 혈액 순환을 개선하는 데 도움이 됩니다. 이 스트레칭은 특히 컴퓨터 작업이나 스마트폰 사용이 많은 현대인들에게 효과적입니다.",
+          "protocol": {
+            "preparation": [
+              "의자에 바른 자세로 앉거나 서 있습니다.",
+              "어깨의 긴장을 풀고 편안한 상태를 유지합니다."
+            ],
+            "steps": [
+              "오른손으로 머리 왼쪽을 잡습니다.",
+              "부드럽게 머리를 오른쪽으로 기울입니다.",
+              "왼쪽 승모근이 스트레칭되는 느낌이 들 때까지 계속합니다.",
+              "15-30초 동안 유지합니다.",
+              "천천히 원래 자세로 돌아옵니다.",
+              "반대쪽도 같은 방법으로 반복합니다."
+            ],
+            "variations": [
+              "앉아서 수행하기",
+              "서서 수행하기",
+              "앉아서 턱을 약간 당기며 수행하기"
+            ],
+            "precautions": [
+              "목을 너무 강하게 당기지 않습니다.",
+              "통증이 느껴지면 즉시 중단합니다.",
+              "최근 목 부상이 있는 경우 의사와 상담 후 시행합니다."
+            ],
+            "evidence_level": "중간",
+            "recommended_sets": "2-3세트",
+            "recommended_frequency": "매일 2-3회"
+          },
+          "evidence": {
+            "pmid": "",
+            "url": "",
+            "publication_date": ""
+          },
+          "timestamp": "2025-02-26T18:16:48.904025",
+          "enhanced_metadata": {
+            "프로토콜_분석": {
+              "논문_제공_프로토콜": "",
+              "과학적_근거": "승모근 스트레칭은 목과 어깨의 혈액 순환을 개선하고 근육 긴장을 완화하는 데 효과적입니다.",
+              "대상_조건": "특별한 제한 없이 대부분의 사람들에게 적합합니다."
+            },
+            "스트레칭_상세화": {
+              "시작_자세": "의자에 바른 자세로 앉거나 서 있는 상태에서 어깨의 긴장을 풀고 편안한 상태를 유지합니다.",
+              "동작_단계": [
+                "1단계: 오른손으로 머리 왼쪽을 부드럽게 잡습니다.",
+                "2단계: 천천히 머리를 오른쪽으로 기울입니다.",
+                "3단계: 왼쪽 승모근이 스트레칭되는 느낌이 들 때까지 계속합니다.",
+                "4단계: 해당 자세로 15-30초간 유지합니다.",
+                "5단계: 천천히 원래 자세로 돌아옵니다.",
+                "6단계: 반대쪽도 같은 방법으로 반복합니다."
+              ],
+              "호흡_패턴": [
+                "1단계: 자연스럽게 호흡합니다.",
+                "2단계: 머리를 기울일 때 천천히 숨을 내쉽니다.",
+                "3단계: 스트레칭 자세를 유지하는 동안 편안하게 호흡합니다.",
+                "4단계: 원래 자세로 돌아올 때 숨을 들이마십니다."
+              ],
+              "느껴야_할_감각": "목과 어깨 부위의 편안한 스트레칭 감각이 느껴져야 합니다. 통증이 아닌 당기는 느낌이어야 합니다.",
+              "시각적_큐": "거울을 통해 어깨가 올라가지 않고 편안하게 내려와 있는지 확인합니다."
+            },
+            "난이도_정보": {
+              "난이도_수준": "초급",
+              "연령대별_적합성": {
+                "10대": 9,
+                "20-30대": 10,
+                "40-50대": 8,
+                "60대_이상": 7
+              },
+              "체력_수준별_적합성": {
+                "낮음": 9,
+                "중간": 10,
+                "높음": 9
+              }
+            },
+            "실행_가이드라인": {
+              "권장_시간": "15-30초 유지",
+              "권장_횟수": "2-3세트",
+              "권장_빈도": "매일 2-3회",
+              "강도_조절_방법": "스트레칭 강도는 불편함이 아닌 편안한 당김을 느낄 수 있도록 조절합니다.",
+              "진행_방식": "천천히 부드럽게 진행하며, 갑작스러운 움직임은 피합니다."
+            },
+            "효과_및_적용": {
+              "주요_효과": [
+                "목 긴장 완화",
+                "어깨 통증 감소",
+                "두통 완화",
+                "자세 개선",
+                "혈액 순환 개선"
+              ],
+              "효과_발현_시간": "단기(1-2주)",
+              "통증_완화_효과": {
+                "급성_통증": 7,
+                "만성_통증": 8,
+                "근육_긴장": 9,
+                "관절_통증": 6
+              },
+              "통증_강도별_적합성": {
+                "0-3": 9,
+                "4-6": 7,
+                "7-10": 5
+              }
+            },
+            "직업_관련성": {
+              "직업별_관련성_점수": {
+                "사무직": 10,
+                "서비스직": 8,
+                "육체노동": 7,
+                "운전직": 9,
+                "학생": 9,
+                "프로그래머": 10,
+                "디자이너": 10
+              },
+              "업무_환경_적용_방법": "책상에 앉아 있는 시간이 길 때 1-2시간마다 짧게 이 스트레칭을 수행하면 효과적입니다.",
+              "직업_관련_증상_개선도": 9
+            },
+            "생활_패턴_적합성": {
+              "좌식_생활자_적합도": 10,
+              "활동적_생활자_적합도": 8,
+              "일상_활동_통합_방법": "컴퓨터 작업 중 휴식 시간이나 TV 시청 중, 또는 출퇴근 시간에 수행할 수 있습니다."
+            },
+            "안전_및_주의사항": {
+              "금기사항": [
+                "급성 목 부상이 있는 경우",
+                "최근 목 수술을 받은 경우",
+                "심한 디스크 질환이 있는 경우"
+              ],
+              "수행_시_주의점": [
+                "과도하게 목을 당기지 않습니다.",
+                "통증이 느껴지면 즉시 중단합니다.",
+                "부드럽고 천천히 동작을 수행합니다."
+              ],
+              "중단해야_할_신호": [
+                "심한 통증 발생",
+                "저림이나 마비감",
+                "어지러움",
+                "메스꺼움"
+              ]
+            },
+            "검색_및_추천용_태그": {
+              "증상_관련_태그": [
+                "목 통증",
+                "어깨 통증",
+                "두통",
+                "근육 경직",
+                "거북목"
+              ],
+              "직업_관련_태그": [
+                "사무직",
+                "프로그래머",
+                "디자이너",
+                "학생",
+                "운전직"
+              ],
+              "상황_관련_태그": [
+                "컴퓨터 작업",
+                "스마트폰 사용",
+                "장시간 앉기",
+                "스트레스",
+                "나쁜 자세"
+              ],
+              "효과_관련_태그": [
+                "긴장 완화",
+                "통증 감소",
+                "혈액 순환 개선",
+                "자세 개선",
+                "두통 완화"
+              ]
+            },
+            "생성_방식": "manual_expert"
+          }
+        }
+      ]
+    }
+  }
+}
