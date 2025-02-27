@@ -250,12 +250,168 @@ async def get_muscle_exercises(muscle_name: str):
             raise HTTPException(status_code=404, detail=f"Muscle '{muscle_name}' not found")
         
         muscle_info = muscles_data[muscle_name]
+        exercises = muscle_info.get("exercises", [])
+        
+        # 운동 데이터 전처리
+        processed_exercises = []
+        for exercise in exercises:
+            processed_exercise = {
+                "id": exercise.get("id", ""),
+                "title": exercise.get("title", ""),
+                "한글_제목": f"{muscle_name} 스트레칭",  # 기본 한글 제목 설정
+            }
+            
+            # enhanced_metadata가 있는 경우 처리
+            if "enhanced_metadata" in exercise and exercise["enhanced_metadata"]:
+                metadata = exercise["enhanced_metadata"]
+                
+                # 스트레칭 방법 처리
+                stretching_method = {}
+                if metadata.get("스트레칭_상세화"):
+                    stretching_detail = metadata["스트레칭_상세화"]
+                    if stretching_detail.get("시작_자세"):
+                        stretching_method["시작_자세"] = stretching_detail["시작_자세"]
+                    if stretching_detail.get("동작_단계") and isinstance(stretching_detail["동작_단계"], list) and len(stretching_detail["동작_단계"]) > 0:
+                        stretching_method["동작_단계"] = stretching_detail["동작_단계"]
+                    if stretching_detail.get("호흡_방법"):
+                        stretching_method["호흡_방법"] = stretching_detail["호흡_방법"]
+                    if stretching_detail.get("목적"):
+                        processed_exercise["목적"] = stretching_detail["목적"]
+                
+                # 스트레칭 방법이 없고 protocol.steps가 있는 경우
+                if not stretching_method.get("동작_단계") and exercise.get("protocol") and exercise["protocol"].get("steps"):
+                    # 영어 콘텐츠 필터링 - 영어가 포함된 경우 건너뜁니다
+                    steps = exercise["protocol"]["steps"]
+                    contains_english = False
+                    for step in steps:
+                        # 영어 문자가 포함되어 있는지 확인 (A-Za-z)
+                        if any(ord(c) >= 65 and ord(c) <= 122 for c in step):
+                            contains_english = True
+                            break
+                    
+                    if not contains_english:
+                        stretching_method["동작_단계"] = steps
+                
+                # 스트레칭 방법이 있는 경우만 추가
+                if stretching_method.get("동작_단계"):
+                    # 영어 콘텐츠 필터링 - 동작 단계에 영어가 포함된 경우 건너뜁니다
+                    contains_english = False
+                    for step in stretching_method["동작_단계"]:
+                        if any(ord(c) >= 65 and ord(c) <= 122 for c in step):
+                            contains_english = True
+                            break
+                    
+                    if not contains_english:
+                        processed_exercise["스트레칭_방법"] = stretching_method
+                
+                # 효과 및 적용 처리
+                if metadata.get("효과_및_적용"):
+                    effects = metadata["효과_및_적용"]
+                    processed_effects = {}
+                    
+                    if effects.get("주요_효과") and isinstance(effects["주요_효과"], list):
+                        processed_effects["주요_효과"] = effects["주요_효과"]
+                    
+                    if effects.get("적용_대상"):
+                        processed_effects["적용_대상"] = effects["적용_대상"]
+                    
+                    if processed_effects:
+                        processed_exercise["효과_및_적용"] = processed_effects
+                
+                # 안전 및 주의사항 처리
+                if metadata.get("안전_및_주의사항"):
+                    safety = metadata["안전_및_주의사항"]
+                    processed_safety = {}
+                    
+                    if safety.get("수행_시_주의점") and isinstance(safety["수행_시_주의점"], list):
+                        processed_safety["수행_시_주의점"] = safety["수행_시_주의점"]
+                    
+                    if safety.get("금기사항") and isinstance(safety["금기사항"], list):
+                        processed_safety["금기사항"] = safety["금기사항"]
+                    
+                    if processed_safety:
+                        processed_exercise["안전_및_주의사항"] = processed_safety
+                
+                # 추천 시간 및 빈도 처리
+                if metadata.get("실행_가이드라인"):
+                    guidelines = metadata["실행_가이드라인"]
+                    processed_guidelines = {}
+                    
+                    if guidelines.get("권장_시간"):
+                        processed_guidelines["유지_시간"] = guidelines["권장_시간"]
+                    
+                    if guidelines.get("권장_횟수"):
+                        processed_guidelines["반복_횟수"] = guidelines["권장_횟수"]
+                    
+                    if guidelines.get("권장_빈도"):
+                        processed_guidelines["주간_빈도"] = guidelines["권장_빈도"]
+                    
+                    if processed_guidelines:
+                        processed_exercise["추천_시간_및_빈도"] = processed_guidelines
+                
+                # 난이도 정보 처리
+                if metadata.get("난이도_정보") and metadata["난이도_정보"].get("난이도_수준"):
+                    processed_exercise["난이도"] = metadata["난이도_정보"]["난이도_수준"]
+                
+                # 태그 처리
+                if metadata.get("검색_및_추천용_태그"):
+                    tags = metadata["검색_및_추천용_태그"]
+                    all_tags = []
+                    
+                    for tag_category in ["증상_관련_태그", "직업_관련_태그", "상황_관련_태그", "효과_관련_태그"]:
+                        if tags.get(tag_category) and isinstance(tags[tag_category], list):
+                            all_tags.extend(tags[tag_category])
+                    
+                    if all_tags:
+                        processed_exercise["태그"] = all_tags
+            
+            # 관련 자료 처리 (중복 제거)
+            if exercise.get("evidence"):
+                evidence = exercise["evidence"]
+                processed_evidence = {}
+                
+                # 원래 URL이 있으면 항상 포함
+                if evidence.get("url"):
+                    processed_evidence["url"] = evidence["url"]
+                
+                # PMID가 있으면 PubMed URL도 생성
+                if evidence.get("pmid"):
+                    processed_evidence["pubmed_url"] = f"https://pubmed.ncbi.nlm.nih.gov/{evidence['pmid']}/"
+                
+                if processed_evidence:
+                    processed_exercise["관련_자료"] = processed_evidence
+            
+            # 간략 설명 추가
+            if "enhanced_metadata" in exercise and exercise["enhanced_metadata"]:
+                metadata = exercise["enhanced_metadata"]
+                
+                # 목적이 없는 경우 주요 효과에서 설명 생성
+                if not processed_exercise.get("목적") and metadata.get("효과_및_적용") and metadata["효과_및_적용"].get("주요_효과"):
+                    effects = metadata["효과_및_적용"]["주요_효과"]
+                    if effects and len(effects) > 0:
+                        processed_exercise["간략_설명"] = f"{muscle_name}의 {', '.join(effects[:2])}에 효과적인 스트레칭입니다."
+            
+            # 간략 설명이 없고 abstract가 있는 경우 (최대 100자)
+            if not processed_exercise.get("간략_설명") and exercise.get("abstract"):
+                abstract = exercise["abstract"]
+                if len(abstract) > 100:
+                    processed_exercise["간략_설명"] = abstract[:100] + "..."
+                else:
+                    processed_exercise["간략_설명"] = abstract
+            
+            # 간략 설명이 없는 경우 기본 설명 추가
+            if not processed_exercise.get("간략_설명"):
+                processed_exercise["간략_설명"] = f"{muscle_name}의 유연성을 높이고 통증을 완화하는 스트레칭입니다."
+            
+            # 스트레칭 방법이 있는 경우만 추가 (필수 조건)
+            if "스트레칭_방법" in processed_exercise:
+                processed_exercises.append(processed_exercise)
         
         # 결과 구조화
         result = {
             "muscle": muscle_name,
             "english": muscle_info.get("info", {}).get("english", ""),
-            "exercises": muscle_info.get("exercises", [])
+            "exercises": processed_exercises
         }
         
         return result
