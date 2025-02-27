@@ -5,7 +5,7 @@ import { Activity, Calendar, ArrowRight, Heart, User, Clock, PlayCircle, Chevron
 import Link from 'next/link';
 import Image from 'next/image';
 import { Fnb } from '@/components/Fnb';
-import { PeoplefirstNeat } from '../fonts';
+import { Stardust } from '../fonts';
 
 const MainPage = () => {
   const [activeTab, setActiveTab] = useState('home');
@@ -590,7 +590,7 @@ const MainPage = () => {
                 <User className="w-5 h-5 text-[#6B925C]" />
               </div>
               <div>
-                <h2 className={`${PeoplefirstNeat.className} text-lg font-bold text-[#6B925C]`}>
+                <h2 className={`${Stardust.className} text-lg font-bold text-[#6B925C]`}>
                   {user ? `안녕하세요 ${user.name} 님` : '안녕하세요'}
                 </h2>
                 <p className="text-sm text-gray-600">오늘도 건강한 하루 되세요!</p>
@@ -605,8 +605,8 @@ const MainPage = () => {
           <div className="bg-gradient-to-r from-[#93D400] to-[#6B925C] rounded-xl p-5 mb-8 shadow-md transform transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
             <div className="flex items-center justify-between">
               <div className="text-white">
-                <h2 className="text-xl font-bold">지금 바로 시작하세요</h2>
-                <p className="text-sm mt-1 opacity-90">맞춤형 스트레칭으로 건강한 하루를!</p>
+                <h2 className={`${Stardust.className} text-xl font-bold`}>지금 바로 시작하세요</h2>
+                <p className={`${Stardust.className} text-sm mt-1 opacity-90`}>맞춤형 스트레칭으로 건강한 하루를!</p>
               </div>
               <button 
                 onClick={createSession}
@@ -634,7 +634,7 @@ const MainPage = () => {
           {/* 오늘의 추천 - 세로로 배치 변경 */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold flex items-center">
+              <h2 className={`${Stardust.className} text-lg font-bold flex items-center`}>
                 <Heart className="w-5 h-5 mr-2 text-[#6B925C]" />
                 오늘의 추천
               </h2>
@@ -655,7 +655,7 @@ const MainPage = () => {
                       <div className={`h-auto bg-gradient-to-r ${item.color} flex flex-col p-4`}>
                         <div className="text-white">
                           <div className="flex justify-between items-center">
-                            <h3 className="font-bold text-lg">{item.title}</h3>
+                            <h3 className={`${Stardust.className} font-bold text-lg`}>{item.title}</h3>
                             <div className="flex space-x-2">
                               <span className="bg-white bg-opacity-30 text-white text-xs px-2 py-1 rounded-full">
                                 {item.condition}
@@ -674,10 +674,10 @@ const MainPage = () => {
                         </div>
                       </div>
                       <div className="p-4">
-                        <p className="text-sm text-gray-600 mb-3">{item.short_description}</p>
+                        <p className={`${Stardust.className} text-sm text-gray-600 mb-3`}>{item.short_description}</p>
                         
                         <div className="mb-3">
-                          <h4 className="text-sm font-semibold mb-1">주요 효과</h4>
+                          <h4 className={`${Stardust.className} text-sm font-semibold mb-1`}>주요 효과</h4>
                           <div className="flex flex-wrap gap-1">
                             {item.effects && item.effects.length > 0 ? (
                               item.effects.map((effect: string, index: number) => (
@@ -710,7 +710,7 @@ const MainPage = () => {
                             {/* 전체 수행 방법 */}
                             {item.steps && item.steps.length > 0 && (
                               <div className="mb-4">
-                                <h4 className="text-sm font-semibold mb-2">전체 수행 방법</h4>
+                                <h4 className={`${Stardust.className} text-sm font-semibold mb-2`}>전체 수행 방법</h4>
                                 <ol className="text-sm text-gray-600 space-y-2 pl-2">
                                   {item.steps.map((step: string, index: number) => (
                                     <li key={index} className="flex">
@@ -726,7 +726,7 @@ const MainPage = () => {
                             
                             {/* 추천 가이드 */}
                             <div className="mb-4 bg-[#F9FFEB] p-3 rounded-lg">
-                              <h4 className="text-sm font-semibold mb-2">추천 가이드</h4>
+                              <h4 className={`${Stardust.className} text-sm font-semibold mb-2`}>추천 가이드</h4>
                               <div className="grid grid-cols-2 gap-3 text-sm">
                                 <div className="flex items-center">
                                   <Clock className="w-4 h-4 mr-2 text-[#6B925C]" />
@@ -746,7 +746,7 @@ const MainPage = () => {
                             {/* 주의사항 */}
                             {item.cautions && item.cautions.length > 0 && (
                               <div className="mb-4 bg-[#FFF0F0] p-3 rounded-lg">
-                                <h4 className="text-sm font-semibold mb-2 text-[#FF6B6B]">주의사항</h4>
+                                <h4 className={`${Stardust.className} text-sm font-semibold mb-2 text-[#FF6B6B]`}>주의사항</h4>
                                 <ul className="text-sm text-gray-600 space-y-1 pl-2">
                                   {item.cautions.map((caution: string, index: number) => (
                                     <li key={index} className="list-disc list-inside">{caution}</li>
@@ -758,7 +758,7 @@ const MainPage = () => {
                             {/* 적용 대상 */}
                             {item.target_audience && (
                               <div className="mb-4">
-                                <h4 className="text-sm font-semibold mb-2">적용 대상</h4>
+                                <h4 className={`${Stardust.className} text-sm font-semibold mb-2`}>적용 대상</h4>
                                 <p className="text-sm text-gray-600">{item.target_audience}</p>
                               </div>
                             )}
@@ -766,7 +766,7 @@ const MainPage = () => {
                             {/* 관련 자료 */}
                             {item.reference_url && (
                               <div className="pt-2 border-t border-gray-200">
-                                <h4 className="text-sm font-semibold mb-1">관련 문서</h4>
+                                <h4 className={`${Stardust.className} text-sm font-semibold mb-1`}>관련 문서</h4>
                                 <a 
                                   href={item.reference_url} 
                                   target="_blank" 
@@ -811,7 +811,7 @@ const MainPage = () => {
           {/* 부위별 스트레칭 */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold flex items-center">
+              <h2 className={`${Stardust.className} text-lg font-bold flex items-center`}>
                 <Activity className="w-5 h-5 mr-2 text-[#6B925C]" />
                 부위별 스트레칭
               </h2>
@@ -828,9 +828,9 @@ const MainPage = () => {
                       : `${part.color} shadow-sm hover:shadow hover:scale-[1.02]`
                   }`}
                 >
-                  <span className="text-sm font-medium">{part.name}</span>
+                  <span className={`${Stardust.className} text-sm font-medium`}>{part.name}</span>
                   {part.muscles && (
-                    <span className="text-xs mt-1 opacity-80 text-center">
+                    <span className={`${Stardust.className} text-xs mt-1 opacity-80 text-center`}>
                       {part.muscles.slice(0, 2).join(', ')}
                       {part.muscles.length > 2 && ' 외'}
                     </span>
@@ -843,7 +843,7 @@ const MainPage = () => {
             {selectedBodyPart && (
               <div className="mt-4 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-bold flex items-center">
+                  <h3 className={`${Stardust.className} font-bold flex items-center`}>
                     <span className="w-6 h-6 bg-[#E5FFA9] rounded-full flex items-center justify-center mr-2 text-xs text-[#6B925C]">
                       {Object.keys(muscleCategories).findIndex(key => muscleCategories[key as keyof typeof muscleCategories].id === selectedBodyPart) + 1}
                     </span>
@@ -1121,11 +1121,11 @@ const MainPage = () => {
           {/* 최근 활동 */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold flex items-center">
+              <h2 className={`${Stardust.className} text-lg font-bold flex items-center`}>
                 <Calendar className="w-5 h-5 mr-2 text-[#6B925C]" />
                 최근 활동
               </h2>
-              <Link href="/history" className="text-sm text-[#6B925C] flex items-center group">
+              <Link href="/history" className={`${Stardust.className} text-sm text-[#6B925C] flex items-center group`}>
                 전체보기 <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>

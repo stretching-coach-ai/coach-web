@@ -75,7 +75,7 @@ const select = () => {
           <Button 
             variant="main" 
             size="main" 
-            className="text-[18px] w-full flex items-center justify-center"
+            className={`${Stardust.className} text-[18px] w-full flex items-center justify-center`}
           >
             <Link className="w-full flex items-center justify-center" href="/auth/login">
               로그인
@@ -85,7 +85,7 @@ const select = () => {
           <Button
             variant="main"
             size="main"
-            className="text-[18px] w-full bg-[#E5FFA9] text-[#6B925C] hover:bg-[#d9ff8a] flex items-center justify-center"
+            className={`${Stardust.className} text-[18px] w-full bg-[#E5FFA9] text-[#6B925C] hover:bg-[#d9ff8a] flex items-center justify-center`}
             onClick={handleGuestLoging}
             disabled={loading}
           >
@@ -105,7 +105,7 @@ const select = () => {
           <Button
             variant="main"
             size="main"
-            className="text-[18px] w-full bg-[#9EBC5A] text-white hover:bg-[#8aad49] flex items-center justify-center"
+            className={`${Stardust.className} text-[18px] w-full bg-[#9EBC5A] text-white hover:bg-[#8aad49] flex items-center justify-center`}
           >
             <Link className="w-full flex items-center justify-center" href="/signup">
               회원가입
