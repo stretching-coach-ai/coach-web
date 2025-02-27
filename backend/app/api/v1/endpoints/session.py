@@ -13,11 +13,50 @@ from app.schemas.user import UserResponse
 from app.services.embedding_service import EmbeddingService
 from app.api.v1.dependencies import get_current_user
 import json
+import re
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 user_service = UserService()
+
+# 영어 콘텐츠 필터링 유틸리티 함수 추가
+def is_english_content(text: str) -> bool:
+    """
+    텍스트가 영어 콘텐츠인지 확인하는 함수
+    
+    Args:
+        text: 확인할 텍스트
+        
+    Returns:
+        영어 콘텐츠이면 True, 아니면 False
+    """
+    if not text or not isinstance(text, str):
+        return False
+        
+    # 영어 문자 비율 계산
+    english_char_count = sum(1 for c in text if (ord('a') <= ord(c.lower()) <= ord('z')))
+    total_char_count = len(text)
+    
+    # 영어 문자 비율이 40% 이상이면 영어 콘텐츠로 판단
+    if total_char_count > 0 and english_char_count / total_char_count > 0.4:
+        return True
+        
+    # 영어 문장 패턴 확인 (대문자로 시작하고 영어 단어가 연속으로 나오는 경우)
+    if re.search(r'[A-Z][a-z]+\s+[a-z]+\s+[a-z]+', text):
+        return True
+        
+    # 학술 용어 패턴 확인
+    academic_terms = ['study', 'effect', 'impact', 'research', 'analysis', 'result', 'conclusion', 'method', 'objective']
+    if any(term in text.lower() for term in academic_terms):
+        return True
+        
+    # 일반적인 영어 단어 패턴 확인
+    common_words = ['the', 'a', 'an', 'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were']
+    if any(f' {word} ' in f' {text.lower()} ' for word in common_words):
+        return True
+        
+    return False
 
 @router.post("/sessions", status_code=201)
 async def create_session(response: Response):
@@ -370,39 +409,41 @@ async def get_muscle_exercises(muscle_name: str):
                 if metadata.get("스트레칭_상세화"):
                     stretching_detail = metadata["스트레칭_상세화"]
                     if stretching_detail.get("시작_자세"):
-                        stretching_method["시작_자세"] = stretching_detail["시작_자세"]
+                        # 영어 콘텐츠 필터링
+                        start_pose = stretching_detail["시작_자세"]
+                        if not is_english_content(start_pose):
+                            stretching_method["시작_자세"] = start_pose
+                            
                     if stretching_detail.get("동작_단계") and isinstance(stretching_detail["동작_단계"], list) and len(stretching_detail["동작_단계"]) > 0:
-                        stretching_method["동작_단계"] = stretching_detail["동작_단계"]
+                        # 영어 콘텐츠 필터링
+                        filtered_steps = [step for step in stretching_detail["동작_단계"] if not is_english_content(step)]
+                        if filtered_steps:
+                            stretching_method["동작_단계"] = filtered_steps
+                            
                     if stretching_detail.get("호흡_방법"):
-                        stretching_method["호흡_방법"] = stretching_detail["호흡_방법"]
+                        # 영어 콘텐츠 필터링
+                        breathing = stretching_detail["호흡_방법"]
+                        if not is_english_content(breathing):
+                            stretching_method["호흡_방법"] = breathing
+                            
                     if stretching_detail.get("목적"):
-                        processed_exercise["목적"] = stretching_detail["목적"]
+                        # 영어 콘텐츠 필터링
+                        purpose = stretching_detail["목적"]
+                        if not is_english_content(purpose):
+                            processed_exercise["목적"] = purpose
                 
                 # 스트레칭 방법이 없고 protocol.steps가 있는 경우
                 if not stretching_method.get("동작_단계") and exercise.get("protocol") and exercise["protocol"].get("steps"):
-                    # 영어 콘텐츠 필터링 - 영어가 포함된 경우 건너뜁니다
+                    # 영어 콘텐츠 필터링
                     steps = exercise["protocol"]["steps"]
-                    contains_english = False
-                    for step in steps:
-                        # 영어 문자가 포함되어 있는지 확인 (A-Za-z)
-                        if any(ord(c) >= 65 and ord(c) <= 122 for c in step):
-                            contains_english = True
-                            break
+                    filtered_steps = [step for step in steps if not is_english_content(step)]
                     
-                    if not contains_english:
-                        stretching_method["동작_단계"] = steps
+                    if filtered_steps:
+                        stretching_method["동작_단계"] = filtered_steps
                 
                 # 스트레칭 방법이 있는 경우만 추가
                 if stretching_method.get("동작_단계"):
-                    # 영어 콘텐츠 필터링 - 동작 단계에 영어가 포함된 경우 건너뜁니다
-                    contains_english = False
-                    for step in stretching_method["동작_단계"]:
-                        if any(ord(c) >= 65 and ord(c) <= 122 for c in step):
-                            contains_english = True
-                            break
-                    
-                    if not contains_english:
-                        processed_exercise["스트레칭_방법"] = stretching_method
+                    processed_exercise["스트레칭_방법"] = stretching_method
                 
                 # 효과 및 적용 처리
                 if metadata.get("효과_및_적용"):
@@ -410,10 +451,16 @@ async def get_muscle_exercises(muscle_name: str):
                     processed_effects = {}
                     
                     if effects.get("주요_효과") and isinstance(effects["주요_효과"], list):
-                        processed_effects["주요_효과"] = effects["주요_효과"]
+                        # 영어 콘텐츠 필터링
+                        filtered_effects = [effect for effect in effects["주요_효과"] if not is_english_content(effect)]
+                        if filtered_effects:
+                            processed_effects["주요_효과"] = filtered_effects
                     
                     if effects.get("적용_대상"):
-                        processed_effects["적용_대상"] = effects["적용_대상"]
+                        # 영어 콘텐츠 필터링
+                        target = effects["적용_대상"]
+                        if not is_english_content(target):
+                            processed_effects["적용_대상"] = target
                     
                     if processed_effects:
                         processed_exercise["효과_및_적용"] = processed_effects
@@ -424,10 +471,16 @@ async def get_muscle_exercises(muscle_name: str):
                     processed_safety = {}
                     
                     if safety.get("수행_시_주의점") and isinstance(safety["수행_시_주의점"], list):
-                        processed_safety["수행_시_주의점"] = safety["수행_시_주의점"]
+                        # 영어 콘텐츠 필터링
+                        filtered_cautions = [caution for caution in safety["수행_시_주의점"] if not is_english_content(caution)]
+                        if filtered_cautions:
+                            processed_safety["수행_시_주의점"] = filtered_cautions
                     
                     if safety.get("금기사항") and isinstance(safety["금기사항"], list):
-                        processed_safety["금기사항"] = safety["금기사항"]
+                        # 영어 콘텐츠 필터링
+                        filtered_contraindications = [contraindication for contraindication in safety["금기사항"] if not is_english_content(contraindication)]
+                        if filtered_contraindications:
+                            processed_safety["금기사항"] = filtered_contraindications
                     
                     if processed_safety:
                         processed_exercise["안전_및_주의사항"] = processed_safety
@@ -438,20 +491,32 @@ async def get_muscle_exercises(muscle_name: str):
                     processed_guidelines = {}
                     
                     if guidelines.get("권장_시간"):
-                        processed_guidelines["유지_시간"] = guidelines["권장_시간"]
+                        # 영어 콘텐츠 필터링
+                        time_rec = guidelines["권장_시간"]
+                        if not is_english_content(time_rec):
+                            processed_guidelines["유지_시간"] = time_rec
                     
                     if guidelines.get("권장_횟수"):
-                        processed_guidelines["반복_횟수"] = guidelines["권장_횟수"]
+                        # 영어 콘텐츠 필터링
+                        rep_rec = guidelines["권장_횟수"]
+                        if not is_english_content(rep_rec):
+                            processed_guidelines["반복_횟수"] = rep_rec
                     
                     if guidelines.get("권장_빈도"):
-                        processed_guidelines["주간_빈도"] = guidelines["권장_빈도"]
+                        # 영어 콘텐츠 필터링
+                        freq_rec = guidelines["권장_빈도"]
+                        if not is_english_content(freq_rec):
+                            processed_guidelines["주간_빈도"] = freq_rec
                     
                     if processed_guidelines:
                         processed_exercise["추천_시간_및_빈도"] = processed_guidelines
                 
                 # 난이도 정보 처리
                 if metadata.get("난이도_정보") and metadata["난이도_정보"].get("난이도_수준"):
-                    processed_exercise["난이도"] = metadata["난이도_정보"]["난이도_수준"]
+                    # 영어 콘텐츠 필터링
+                    difficulty = metadata["난이도_정보"]["난이도_수준"]
+                    if not is_english_content(difficulty):
+                        processed_exercise["난이도"] = difficulty
                 
                 # 태그 처리
                 if metadata.get("검색_및_추천용_태그"):
@@ -460,7 +525,9 @@ async def get_muscle_exercises(muscle_name: str):
                     
                     for tag_category in ["증상_관련_태그", "직업_관련_태그", "상황_관련_태그", "효과_관련_태그"]:
                         if tags.get(tag_category) and isinstance(tags[tag_category], list):
-                            all_tags.extend(tags[tag_category])
+                            # 영어 콘텐츠 필터링
+                            filtered_tags = [tag for tag in tags[tag_category] if not is_english_content(tag)]
+                            all_tags.extend(filtered_tags)
                     
                     if all_tags:
                         processed_exercise["태그"] = all_tags
@@ -488,16 +555,20 @@ async def get_muscle_exercises(muscle_name: str):
                 # 목적이 없는 경우 주요 효과에서 설명 생성
                 if not processed_exercise.get("목적") and metadata.get("효과_및_적용") and metadata["효과_및_적용"].get("주요_효과"):
                     effects = metadata["효과_및_적용"]["주요_효과"]
-                    if effects and len(effects) > 0:
-                        processed_exercise["간략_설명"] = f"{muscle_name}의 {', '.join(effects[:2])}에 효과적인 스트레칭입니다."
+                    # 영어 콘텐츠 필터링
+                    filtered_effects = [effect for effect in effects if not is_english_content(effect)]
+                    if filtered_effects and len(filtered_effects) > 0:
+                        processed_exercise["간략_설명"] = f"{muscle_name}의 {', '.join(filtered_effects[:2])}에 효과적인 스트레칭입니다."
             
             # 간략 설명이 없고 abstract가 있는 경우 (최대 100자)
             if not processed_exercise.get("간략_설명") and exercise.get("abstract"):
                 abstract = exercise["abstract"]
-                if len(abstract) > 100:
-                    processed_exercise["간략_설명"] = abstract[:100] + "..."
-                else:
-                    processed_exercise["간략_설명"] = abstract
+                # 영어 콘텐츠 필터링 - abstract는 영어일 가능성이 높으므로 사용하지 않음
+                if not is_english_content(abstract):
+                    if len(abstract) > 100:
+                        processed_exercise["간략_설명"] = abstract[:100] + "..."
+                    else:
+                        processed_exercise["간략_설명"] = abstract
             
             # 간략 설명이 없는 경우 기본 설명 추가
             if not processed_exercise.get("간략_설명"):

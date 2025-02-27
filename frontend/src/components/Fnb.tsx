@@ -44,12 +44,12 @@ export const Fnb = () => {
             <p className="mt-[2px]">기록</p>
           </Link>
           <Link
-            href="/"
+            href="/more"
             className="flex flex-col text-[10px] font-medium text-[#6B925C] justify-center items-center"
             style={{ width: 'calc(100vw / 8.7)' }}
           >
             <MoreHorizontalCircle01Icon
-              className={`w-8 h-8 ${pathname === '/' ? 'text-[#6B925C]' : 'text-black'}`}
+              className={`w-8 h-8 ${pathname === '/more' ? 'text-[#6B925C]' : 'text-black'}`}
             />
             <p className="mt-[2px]">더보기</p>
           </Link>

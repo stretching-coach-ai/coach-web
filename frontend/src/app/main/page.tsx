@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Activity, Calendar, ArrowRight, Heart, User, Clock, PlayCircle, ChevronUp, ChevronDown } from 'lucide-react';
+import { Activity, Calendar, ArrowRight, Heart, User, Clock, PlayCircle, ChevronUp, ChevronDown, Repeat, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Fnb } from '@/components/Fnb';
@@ -21,6 +21,8 @@ const MainPage = () => {
   const [showAnimation, setShowAnimation] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [sessionLoading, setSessionLoading] = useState(false);
+  const [allExpanded, setAllExpanded] = useState(false);
   
   // 캐릭터 애니메이션 토글
   const toggleCharacterAnimation = () => {
@@ -38,10 +40,27 @@ const MainPage = () => {
     }));
   };
   
-  // 운동 상세 정보 확장 여부 확인
+  // 전체 접기/펼치기 토글
+  const toggleAllExercises = () => {
+    setAllExpanded(!allExpanded);
+    
+    // 모든 운동의 상태를 변경
+    const newExpandedState: {[key: string]: boolean} = {};
+    bodyPartExercises.forEach((muscleData, muscleIndex) => {
+      muscleData.exercises.forEach((_, exerciseIndex) => {
+        const key = `${muscleIndex}-${exerciseIndex}`;
+        newExpandedState[key] = !allExpanded;
+      });
+    });
+    
+    setExpandedExercises(newExpandedState);
+  };
+  
+  // 특정 운동이 펼쳐져 있는지 확인
   const isExerciseExpanded = (muscleIndex: number, exerciseIndex: number) => {
     const key = `${muscleIndex}-${exerciseIndex}`;
-    return expandedExercises[key] || false;
+    // expandedExercises에 해당 키가 없으면 기본값(allExpanded)을 사용
+    return expandedExercises[key] === undefined ? allExpanded : expandedExercises[key];
   };
   
   // 웰컴 화면 관리
@@ -197,20 +216,54 @@ const MainPage = () => {
         // 모든 근육에 대한 API 요청을 병렬로 처리
         const exercisePromises = targetMuscles.map(async (muscle) => {
           try {
+            // 상대 경로로 API 호출 수정
             const response = await fetch(`/api/v1/muscles/${muscle}/exercises`);
             if (response.ok) {
               const data = await response.json();
-              // 근육 이름과 영어 이름을 함께 반환
+              console.log(`${muscle} 운동 데이터:`, data); // 데이터 로깅 추가
+              
+              // 영어 초록 데이터 제거 및 간략_설명 수정 - 더 철저한 처리
+              const processedExercises = data.exercises.map((exercise: any) => {
+                // 영어 초록 데이터 완전 제거
+                if (exercise.abstract) {
+                  delete exercise.abstract;
+                }
+                
+                // title 필드에서 영어 논문 제목 제거 - 한글 제목만 사용
+                if (exercise.title && /[a-zA-Z]{4,}/.test(exercise.title)) {
+                  // title이 영어 논문 제목인 경우 한글_제목으로 대체
+                  exercise.title = exercise.한글_제목 || `${muscle} 스트레칭`;
+                }
+                
+                // 간략_설명이 없거나 영어가 포함된 경우 기본 설명으로 대체
+                const defaultDescription = `${muscle}의 유연성 증가, 통증 감소에 효과적인 스트레칭입니다.`;
+                
+                if (!exercise.간략_설명 || 
+                    /Effect|impact|study|research|randomized|clinical|trial|CONSORT|OBJECTIVE|BACKGROUND|METHODS|RESULTS|CONCLUSION|Comparison|Abstract|A |The |This |of |on |in |with |for |and |or |to |by |is |are |was |were /i.test(exercise.간략_설명) || 
+                    /[a-zA-Z]{3,}/.test(exercise.간략_설명)) {
+                  exercise.간략_설명 = defaultDescription;
+                }
+                
+                // 관련 자료에서 pubmed_url 제거
+                if (exercise.관련_자료) {
+                  if (exercise.관련_자료.pubmed_url) {
+                    delete exercise.관련_자료.pubmed_url;
+                  }
+                }
+                
+                return exercise;
+              });
+              
               return {
                 muscle: muscle,
-                english: data.english || '',
-                exercises: data.exercises || []
+                exercises: processedExercises || []
               };
             }
-            return { muscle, english: '', exercises: [] };
+            console.error(`${muscle} 운동 데이터 응답 오류:`, response.status);
+            return { muscle, exercises: [] };
           } catch (error) {
             console.error(`${muscle} 운동 데이터를 가져오는 중 오류 발생:`, error);
-            return { muscle, english: '', exercises: [] };
+            return { muscle, exercises: [] };
           }
         });
         
@@ -282,23 +335,23 @@ const MainPage = () => {
   
   // 근육을 카테고리별로 분류 - 컴포넌트 외부로 이동하여 재사용 가능하게 함
   const muscleCategories = {
-    '목': { id: 'neck', muscles: ['흉쇄유돌근'], color: 'bg-pink-100 text-pink-600' },
-    '어깨': { id: 'shoulder', muscles: ['삼각근', '승모근'], color: 'bg-yellow-100 text-yellow-600' },
-    '등/허리': { id: 'back', muscles: ['광배근', '승모근'], color: 'bg-blue-100 text-blue-600' },
-    '팔/손목': { id: 'arm', muscles: ['삼두근', '전완근', '단두', '장두'], color: 'bg-purple-100 text-purple-600' },
-    '다리': { id: 'leg', muscles: ['대퇴직근', '내전근', '외측광근', '내측광근', '대둔근', '비복근', '반건양근', '전경골근', '봉공근'], color: 'bg-green-100 text-green-600' },
-    '가슴/복부': { id: 'chest', muscles: ['대흉근', '복직근', '외복사근'], color: 'bg-indigo-100 text-indigo-600' }
+    '목': { id: 'neck', muscles: ['흉쇄유돌근'], color: 'bg-[#FFE8E8] text-[#D86161]' },
+    '어깨': { id: 'shoulder', muscles: ['삼각근', '승모근'], color: 'bg-[#FFF4E0] text-[#E6A23C]' },
+    '등/허리': { id: 'back', muscles: ['광배근', '승모근'], color: 'bg-[#E6F7FF] text-[#1890FF]' },
+    '팔/손목': { id: 'arm', muscles: ['삼두근', '전완근', '단두', '장두'], color: 'bg-[#F0E6FF] text-[#722ED1]' },
+    '다리': { id: 'leg', muscles: ['대퇴직근', '내전근', '외측광근', '내측광근', '대둔근', '비복근', '반건양근', '전경골근', '봉공근'], color: 'bg-[#E6FFEC] text-[#52C41A]' },
+    '가슴/복부': { id: 'chest', muscles: ['대흉근', '복직근', '외복사근'], color: 'bg-[#E6F4FF] text-[#1677FF]' }
   };
   
   const getBodyParts = () => {
     if (loading || muscles.length === 0) {
       return [
-        { id: 'neck', name: '목', count: 0, color: 'bg-pink-100 text-pink-600' },
-        { id: 'shoulder', name: '어깨', count: 0, color: 'bg-yellow-100 text-yellow-600' },
-        { id: 'back', name: '등/허리', count: 0, color: 'bg-blue-100 text-blue-600' },
-        { id: 'arm', name: '팔/손목', count: 0, color: 'bg-purple-100 text-purple-600' },
-        { id: 'leg', name: '다리', count: 0, color: 'bg-green-100 text-green-600' },
-        { id: 'full', name: '전신', count: 0, color: 'bg-indigo-100 text-indigo-600' }
+        { id: 'neck', name: '목', count: 0, color: 'bg-[#FFE8E8] text-[#D86161]', muscles: ['흉쇄유돌근'] },
+        { id: 'shoulder', name: '어깨', count: 0, color: 'bg-[#FFF4E0] text-[#E6A23C]', muscles: ['삼각근', '승모근'] },
+        { id: 'back', name: '등/허리', count: 0, color: 'bg-[#E6F7FF] text-[#1890FF]', muscles: ['광배근', '승모근'] },
+        { id: 'arm', name: '팔/손목', count: 0, color: 'bg-[#F0E6FF] text-[#722ED1]', muscles: ['삼두근', '전완근', '단두', '장두'] },
+        { id: 'leg', name: '다리', count: 0, color: 'bg-[#E6FFEC] text-[#52C41A]', muscles: ['대퇴직근', '내전근', '외측광근', '내측광근', '대둔근', '비복근', '반건양근', '전경골근', '봉공근'] },
+        { id: 'chest', name: '가슴/복부', count: 0, color: 'bg-[#E6F4FF] text-[#1677FF]', muscles: ['대흉근', '복직근', '외복사근'] }
       ];
     }
     
@@ -325,7 +378,6 @@ const MainPage = () => {
     };
     evidence?: {
       url?: string;
-      pmid?: string;
     };
     enhanced_metadata?: any;
     [key: string]: any;
@@ -333,9 +385,33 @@ const MainPage = () => {
   
   interface MuscleData {
     muscle: string;
-    english: string;
     exercises: Exercise[];
   }
+  
+  // 영어 콘텐츠 필터링 유틸리티 함수
+  const filterEnglishContent = (text: string | undefined): boolean => {
+    if (!text) return false;
+    
+    // 영어 학술 용어 및 일반적인 영어 단어 패턴 확인
+    const academicPattern = /Effect|impact|study|research|randomized|clinical|trial|CONSORT|OBJECTIVE|BACKGROUND|METHODS|RESULTS|CONCLUSION|Comparison|Abstract/i;
+    const commonEnglishPattern = /\b(A|The|This|of|on|in|with|for|and|or|to|by|is|are|was|were)\b/i;
+    const longEnglishWordPattern = /[a-zA-Z]{3,}/;
+    
+    // 영어 문장 구조 패턴 (마침표 뒤에 공백 후 대문자로 시작하는 패턴)
+    const englishSentencePattern = /\.\s+[A-Z]/;
+    
+    // 영어 비율 계산 (영문자 수 / 전체 텍스트 길이)
+    const englishCharCount = (text.match(/[a-zA-Z]/g) || []).length;
+    const englishRatio = englishCharCount / text.length;
+    
+    // 다음 조건 중 하나라도 만족하면 영어 콘텐츠로 판단
+    return (
+      academicPattern.test(text) || 
+      (commonEnglishPattern.test(text) && longEnglishWordPattern.test(text)) ||
+      englishSentencePattern.test(text) ||
+      englishRatio > 0.4 // 텍스트의 40% 이상이 영문자인 경우
+    );
+  };
   
   return (
     <div className="pb-20 max-w-md mx-auto bg-gray-50 min-h-screen">
@@ -469,40 +545,51 @@ const MainPage = () => {
               </h2>
             </div>
             
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 mb-4">
               {bodyParts.map((part) => (
-                <div 
+                <button
                   key={part.id}
-                  className={`${part.color} rounded-xl p-3 text-center cursor-pointer transition-all duration-300 hover:shadow-md hover:scale-105 
-                    ${selectedBodyPart === part.id ? 'ring-2 ring-[#6B925C] shadow-md' : ''}`}
                   onClick={() => handleBodyPartClick(part.id)}
+                  className={`p-3 rounded-xl flex flex-col items-center justify-center transition-all duration-300 ${
+                    selectedBodyPart === part.id
+                      ? 'bg-[#93D400] text-white shadow-md scale-105'
+                      : `${part.color} shadow-sm hover:shadow hover:scale-[1.02]`
+                  }`}
                 >
-                  <div className="flex flex-col items-center">
-                    <div className="w-10 h-10 rounded-full bg-white/50 flex items-center justify-center mb-2">
-                      {/* 각 부위별 아이콘 추가 */}
-                      {part.id === 'neck' && <span className="text-lg">👤</span>}
-                      {part.id === 'shoulder' && <span className="text-lg">💪</span>}
-                      {part.id === 'back' && <span className="text-lg">🔙</span>}
-                      {part.id === 'arm' && <span className="text-lg">💪</span>}
-                      {part.id === 'leg' && <span className="text-lg">🦵</span>}
-                      {part.id === 'full' && <span className="text-lg">👤</span>}
-                    </div>
-                    <p className="font-medium">{part.name}</p>
-                    <p className="text-xs mt-1">{part.count}개 운동</p>
-                  </div>
-                </div>
+                  <span className="text-sm font-medium">{part.name}</span>
+                  {part.muscles && (
+                    <span className="text-xs mt-1 opacity-80 text-center">
+                      {part.muscles.slice(0, 2).join(', ')}
+                      {part.muscles.length > 2 && ' 외'}
+                    </span>
+                  )}
+                </button>
               ))}
             </div>
             
-            {/* 선택된 부위의 운동 목록 - 접기/펼치기 기능 제거 */}
+            {/* 선택된 부위의 운동 표시 */}
             {selectedBodyPart && (
-              <div className="mt-4 bg-white rounded-xl p-4 shadow-sm animate-fadeIn border border-gray-100">
-                <h3 className="font-bold mb-3 flex items-center">
-                  <span className="w-6 h-6 bg-[#E5FFA9] rounded-full flex items-center justify-center mr-2 text-xs text-[#6B925C]">
-                    {Object.keys(muscleCategories).findIndex(key => muscleCategories[key as keyof typeof muscleCategories].id === selectedBodyPart) + 1}
-                  </span>
-                  {Object.keys(muscleCategories).find(key => muscleCategories[key as keyof typeof muscleCategories].id === selectedBodyPart)} 스트레칭
-                </h3>
+              <div className="mt-4 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-bold flex items-center">
+                    <span className="w-6 h-6 bg-[#E5FFA9] rounded-full flex items-center justify-center mr-2 text-xs text-[#6B925C]">
+                      {Object.keys(muscleCategories).findIndex(key => muscleCategories[key as keyof typeof muscleCategories].id === selectedBodyPart) + 1}
+                    </span>
+                    {Object.keys(muscleCategories).find(key => muscleCategories[key as keyof typeof muscleCategories].id === selectedBodyPart)} 스트레칭
+                  </h3>
+                  
+                  {/* 전체 접기/펼치기 버튼 */}
+                  <button 
+                    onClick={toggleAllExercises}
+                    className="text-sm flex items-center text-[#6B925C] hover:underline"
+                  >
+                    {allExpanded ? (
+                      <>전체 접기 <ChevronUp className="w-4 h-4 ml-1" /></>
+                    ) : (
+                      <>전체 펼치기 <ChevronDown className="w-4 h-4 ml-1" /></>
+                    )}
+                  </button>
+                </div>
                 
                 {loadingExercises ? (
                   <div className="flex justify-center py-4">
@@ -516,32 +603,194 @@ const MainPage = () => {
                           <span className="w-5 h-5 bg-[#E5FFA9] rounded-full flex items-center justify-center mr-2 text-xs text-[#6B925C]">
                             {muscleIndex + 1}
                           </span>
-                          {muscleData.muscle} ({muscleData.english})
+                          {muscleData.muscle}
                         </h4>
                         <div className="mt-2 space-y-3">
                           {muscleData.exercises.map((exercise, exerciseIndex) => (
                             <div key={exerciseIndex} className="bg-gray-50 rounded-lg p-3 hover:bg-[#F9FFEB] transition-colors">
                               <div className="flex justify-between items-start">
-                                <h5 className="font-medium">{exercise.title}</h5>
+                                <h5 className="font-medium">{exercise.한글_제목 || `${muscleData.muscle} 스트레칭`}</h5>
+                                <button 
+                                  onClick={() => toggleExerciseDetails(muscleIndex, exerciseIndex)}
+                                  className="text-gray-500 hover:text-[#6B925C] p-1"
+                                >
+                                  {isExerciseExpanded(muscleIndex, exerciseIndex) ? (
+                                    <ChevronUp className="w-5 h-5" />
+                                  ) : (
+                                    <ChevronDown className="w-5 h-5" />
+                                  )}
+                                </button>
                               </div>
                               
-                              {/* 항상 운동 상세 정보 표시 */}
-                              <div className="mt-3 text-sm text-gray-600 animate-slideUp">
-                                {exercise.abstract && (
-                                  <p className="mb-2">{exercise.abstract}</p>
-                                )}
-                                
-                                {exercise.protocol?.steps && (
-                                  <div className="mt-3">
-                                    <h6 className="font-medium text-[#6B925C] mb-1">수행 방법</h6>
-                                    <ol className="list-decimal list-inside space-y-1">
-                                      {exercise.protocol.steps.map((step, stepIndex) => (
-                                        <li key={stepIndex} className="pl-1">{step}</li>
-                                      ))}
-                                    </ol>
-                                  </div>
-                                )}
-                              </div>
+                              {/* 운동 상세 정보 - 접기/펼치기 가능 */}
+                              {isExerciseExpanded(muscleIndex, exerciseIndex) && (
+                                <div className="mt-3 text-sm text-gray-600 animate-slideUp">
+                                  {/* 간략 설명 표시 - 영어 초록 필터링 강화 */}
+                                  {exercise.간략_설명 && !filterEnglishContent(exercise.간략_설명) && (
+                                    <p className="mb-2">{exercise.간략_설명}</p>
+                                  )}
+                                  
+                                  {/* 목적 정보 표시 */}
+                                  {exercise.목적 && !filterEnglishContent(exercise.목적) && (
+                                    <div className="mt-3">
+                                      <h6 className="font-medium text-[#6B925C] mb-1">목적</h6>
+                                      <p>{exercise.목적}</p>
+                                    </div>
+                                  )}
+                                  
+                                  {exercise.스트레칭_방법?.동작_단계 && (
+                                    <div className="mt-3">
+                                      <h6 className="font-medium text-[#6B925C] mb-1">수행 방법</h6>
+                                      <ol className="list-decimal list-inside space-y-1">
+                                        {exercise.스트레칭_방법.동작_단계
+                                          .filter((step: string) => !filterEnglishContent(step))
+                                          .map((step: string, stepIndex: number) => (
+                                            <li key={stepIndex} className="pl-1">{step}</li>
+                                          ))}
+                                      </ol>
+                                    </div>
+                                  )}
+                                  
+                                  {exercise.protocol?.steps && !exercise.스트레칭_방법?.동작_단계 && (
+                                    <div className="mt-3">
+                                      <h6 className="font-medium text-[#6B925C] mb-1">수행 방법</h6>
+                                      <ol className="list-decimal list-inside space-y-1">
+                                        {exercise.protocol.steps
+                                          .filter((step: string) => !filterEnglishContent(step))
+                                          .map((step: string, stepIndex: number) => (
+                                            <li key={stepIndex} className="pl-1">{step}</li>
+                                          ))}
+                                      </ol>
+                                    </div>
+                                  )}
+                                  
+                                  {/* 효과 및 적용 정보 표시 */}
+                                  {exercise.효과_및_적용?.주요_효과 && (
+                                    <div className="mt-3">
+                                      <h6 className="font-medium text-[#6B925C] mb-1">주요 효과</h6>
+                                      <ul className="list-disc list-inside space-y-1">
+                                        {exercise.효과_및_적용.주요_효과
+                                          .filter((effect: string) => !filterEnglishContent(effect))
+                                          .map((effect: string, effectIndex: number) => (
+                                            <li key={effectIndex} className="pl-1 text-gray-700">{effect}</li>
+                                          ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                  
+                                  {exercise.효과_및_적용?.적용_대상 && !filterEnglishContent(exercise.효과_및_적용.적용_대상) && (
+                                    <div className="mt-3">
+                                      <h6 className="font-medium text-[#6B925C] mb-1">적용 대상</h6>
+                                      <p className="text-gray-700">{exercise.효과_및_적용.적용_대상}</p>
+                                    </div>
+                                  )}
+                                  
+                                  {exercise.안전_및_주의사항?.수행_시_주의점 && (
+                                    <div className="mt-3">
+                                      <h6 className="font-medium text-[#FF6B6B] mb-1">주의사항</h6>
+                                      <ul className="list-disc list-inside space-y-1">
+                                        {exercise.안전_및_주의사항.수행_시_주의점
+                                          .filter((point: string) => !filterEnglishContent(point))
+                                          .map((point: string, pointIndex: number) => (
+                                            <li key={pointIndex} className="pl-1 text-gray-700">{point}</li>
+                                          ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                  
+                                  {exercise.안전_및_주의사항?.금기사항 && (
+                                    <div className="mt-3">
+                                      <h6 className="font-medium text-[#FF6B6B] mb-1">금기사항</h6>
+                                      <ul className="list-disc list-inside space-y-1">
+                                        {exercise.안전_및_주의사항.금기사항
+                                          .filter((point: string) => !filterEnglishContent(point))
+                                          .map((point: string, pointIndex: number) => (
+                                            <li key={pointIndex} className="pl-1 text-gray-700">{point}</li>
+                                          ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                  
+                                  {exercise.추천_시간_및_빈도 && (
+                                    <div className="mt-3 bg-[#F9FFEB] p-2 rounded-lg">
+                                      <h6 className="font-medium text-[#6B925C] mb-1">추천 가이드</h6>
+                                      <div className="grid grid-cols-2 gap-2 text-xs">
+                                        {exercise.추천_시간_및_빈도.유지_시간 && (
+                                          <div className="flex items-center">
+                                            <Clock className="w-3 h-3 mr-1 text-[#6B925C]" />
+                                            <span>유지: {exercise.추천_시간_및_빈도.유지_시간}</span>
+                                          </div>
+                                        )}
+                                        {exercise.추천_시간_및_빈도.반복_횟수 && (
+                                          <div className="flex items-center">
+                                            <Repeat className="w-3 h-3 mr-1 text-[#6B925C]" />
+                                            <span>반복: {exercise.추천_시간_및_빈도.반복_횟수}</span>
+                                          </div>
+                                        )}
+                                        {exercise.추천_시간_및_빈도.주간_빈도 && (
+                                          <div className="flex items-center col-span-2">
+                                            <Calendar className="w-3 h-3 mr-1 text-[#6B925C]" />
+                                            <span>빈도: {exercise.추천_시간_및_빈도.주간_빈도}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {/* 난이도 정보 표시 */}
+                                  {exercise.난이도 && (
+                                    <div className="mt-3">
+                                      <h6 className="font-medium text-[#6B925C] mb-1">난이도</h6>
+                                      <p className="text-gray-700">{exercise.난이도}</p>
+                                    </div>
+                                  )}
+                                  
+                                  {/* 태그 정보 표시 - 3개만 표시하도록 수정 */}
+                                  {exercise.태그 && exercise.태그.length > 0 && (
+                                    <div className="mt-3">
+                                      <h6 className="font-medium text-[#6B925C] mb-1">관련 태그</h6>
+                                      <div className="flex flex-wrap gap-1">
+                                        {exercise.태그.slice(0, 3).map((tag: string, tagIndex: number) => (
+                                          <span key={tagIndex} className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs">
+                                            {tag}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {/* 관련 문서 링크 - PubMed 링크 제거하고 URL만 표시 */}
+                                  {(exercise.관련_자료?.url || exercise.evidence?.url) && (
+                                    <div className="mt-3 pt-2 border-t border-gray-200">
+                                      <h6 className="font-medium text-[#6B925C] mb-1">관련 문서</h6>
+                                      <div className="space-y-1">
+                                        {exercise.관련_자료?.url && (
+                                          <a 
+                                            href={exercise.관련_자료.url} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="flex items-center text-blue-500 hover:underline"
+                                          >
+                                            <ExternalLink className="w-3 h-3 mr-1" />
+                                            <span>참고 자료</span>
+                                          </a>
+                                        )}
+                                        {!exercise.관련_자료?.url && exercise.evidence?.url && (
+                                          <a 
+                                            href={exercise.evidence.url} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="flex items-center text-blue-500 hover:underline"
+                                          >
+                                            <ExternalLink className="w-3 h-3 mr-1" />
+                                            <span>참고 자료</span>
+                                          </a>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
