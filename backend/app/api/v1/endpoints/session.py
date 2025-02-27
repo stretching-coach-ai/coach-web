@@ -1,18 +1,22 @@
 from uuid import uuid4
 import logging
-from fastapi import APIRouter, Response, HTTPException, Cookie
+from fastapi import APIRouter, Response, HTTPException, Cookie, Depends
 from fastapi.responses import StreamingResponse
 from app.services.temp_session_service import TempSessionService
 from app.services.helpy_pro_service import HelpyProService
+from app.services.user_service import UserService
 from app.schemas.user_input import UserInput
 from app.schemas.ai_response import AIResponse, StreamingAIResponse
 from app.schemas.session import StretchingSession
+from app.schemas.user import UserResponse
 from app.services.embedding_service import EmbeddingService
+from app.api.v1.dependencies import get_current_user
 import json
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+user_service = UserService()
 
 @router.post("/sessions", status_code=201)
 async def create_session(response: Response):
@@ -20,7 +24,13 @@ async def create_session(response: Response):
     # UUID를 사용하여 고유한 session_id 생성
     session_id = str(uuid4())
     session = await TempSessionService.create_session(session_id)
-    response.set_cookie(key="session_id", value=session.session_id, httponly=True)
+    # 쿠키 설정 (SameSite=Lax로 설정하여 보안 강화)
+    response.set_cookie(
+        key="session_id", 
+        value=session.session_id, 
+        httponly=True,
+        samesite="lax"
+    )
     return {"session_id": session.session_id}
 
 @router.get("/sessions/{session_id}")
@@ -34,7 +44,8 @@ async def get_session(session_id: str):
 @router.post("/sessions/{session_id}/stretching", response_model=AIResponse)
 async def create_stretching_session(
     session_id: str,
-    user_input: UserInput
+    user_input: UserInput,
+    current_user: UserResponse = Depends(get_current_user)
 ):
     """새로운 스트레칭 세션 생성 및 AI 가이드 생성"""
     try:
@@ -88,6 +99,23 @@ async def create_stretching_session(
             ai_response=ai_response.text
         )
         
+        # 6. 로그인한 사용자의 경우 히스토리에도 저장
+        if current_user:
+            logger.info(f"Saving stretching session to user history: {current_user.id}")
+            # 완성된 스트레칭 세션 객체 생성
+            stretching_session = StretchingSession(
+                id=latest_stretching.id,
+                created_at=latest_stretching.created_at,
+                user_input=user_input,
+                ai_response=ai_response.text
+            )
+            
+            # 사용자 히스토리에 저장
+            await user_service.add_stretching_session(
+                user_id=current_user.id,
+                stretching_session=stretching_session.model_dump()
+            )
+        
         return ai_response
         
     except Exception as e:
@@ -115,7 +143,8 @@ async def update_stretching_feedback(
 @router.post("/sessions/{session_id}/stretching/stream")
 async def create_stretching_session_stream(
     session_id: str,
-    user_input: UserInput
+    user_input: UserInput,
+    current_user: UserResponse = Depends(get_current_user)
 ):
     """새로운 스트레칭 세션 생성 및 AI 가이드 생성 (스트리밍 방식)"""
     try:
@@ -153,36 +182,18 @@ async def create_stretching_session_stream(
         stretching_id = latest_stretching.id
         logger.info(f"Created stretching session with ID: {stretching_id}")
         
-        # 4. 스트리밍 응답 생성 함수
-        async def generate_stream():
-            full_response = ""
-            
-            # 스트리밍 응답 생성
-            async for chunk in HelpyProService.generate_stretching_guide_stream(
-                session_id=session_id,
-                user_input=user_input,
-                relevant_exercises=relevant_exercises
-            ):
-                # 응답 형식 변환 (JSON 문자열로)
-                yield f"data: {json.dumps(chunk.dict())}\n\n"
-                
-                # 전체 응답 누적
-                if chunk.content:
-                    full_response += chunk.content
-                
-                # 스트리밍이 완료되면 데이터베이스에 저장
-                if chunk.done and full_response:
-                    # AI 응답 저장
-                    logger.info("Updating stretching AI response")
-                    await TempSessionService.update_stretching_ai_response(
-                        session_id=session_id,
-                        stretching_id=stretching_id,
-                        ai_response=full_response
-                    )
-        
-        # 5. 스트리밍 응답 반환
+        # 4. AI 가이드 스트리밍 생성
+        logger.info("Generating AI guide (streaming)")
         return StreamingResponse(
-            generate_stream(),
+            HelpyProService.generate_stretching_guide_stream(
+                session_id=session_id,
+                stretching_id=stretching_id,
+                user_input=user_input,
+                relevant_exercises=relevant_exercises,
+                temp_session_service=TempSessionService,
+                user_service=user_service,
+                current_user=current_user
+            ),
             media_type="text/event-stream"
         )
         

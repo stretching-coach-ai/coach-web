@@ -6,6 +6,7 @@ import json
 import time
 import asyncio
 from contextlib import asynccontextmanager
+from datetime import datetime
 
 from app.core.config import settings
 from app.schemas.user_input import UserInput
@@ -508,8 +509,12 @@ JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를
     async def generate_stretching_guide_stream(
         cls, 
         session_id: str,
+        stretching_id: str,
         user_input: UserInput,
-        relevant_exercises: List[Dict[str, Any]] = None
+        relevant_exercises: List[Dict[str, Any]] = None,
+        temp_session_service = None,
+        user_service = None,
+        current_user = None
     ) -> AsyncGenerator[StreamingAIResponse, None]:
         """스트레칭 가이드 생성 (스트리밍 방식)"""
         try:
@@ -599,111 +604,126 @@ JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를
                 
                 # API 키가 비어있는지 확인
                 if not cls.API_KEY:
-                    logger.error("API key is empty. Please set HELPY_PRO_API_KEY in environment variables.")
-                    yield StreamingAIResponse(content="API 키가 설정되지 않았습니다. 관리자에게 문의하세요.", done=True)
+                    logger.error("API key is empty")
+                    yield StreamingAIResponse(
+                        content=default_first_line,
+                        done=False
+                    )
+                    yield StreamingAIResponse(
+                        content=default_response[len(default_first_line):],
+                        done=True
+                    )
                     return
-                
-                # API URL 확인
-                if not cls.API_URL or not cls.API_URL.startswith("http"):
-                    logger.error(f"Invalid API URL: {cls.API_URL}")
-                    yield StreamingAIResponse(content="API URL이 올바르지 않습니다. 관리자에게 문의하세요.", done=True)
-                    return
-                
-                # 헤더에 API 키 설정
-                api_headers = {
-                    "accept": "application/json",
-                    "content-type": "application/json",
-                    "authorization": f"Bearer {cls.API_KEY}",
-                    "Cache-Control": "no-cache, no-store, must-revalidate",
-                    "Pragma": "no-cache",
-                    "Expires": "0"
-                }
                 
                 try:
-                    logger.info(f"Starting streaming API request for session: {session_id}")
-                    
+                    # API 요청 보내기
                     async with cls.get_client() as client:
+                        logger.info(f"Sending streaming API request for session: {session_id}")
+                        
                         async with client.stream(
                             "POST",
-                            f"{cls.API_URL}/v1/chat/completions?cache_buster={cache_buster}",
+                            cls.API_URL,
                             json=request_data,
-                            headers=api_headers,
-                            timeout=60.0
+                            headers=headers,
+                            timeout=60.0  # 60초 타임아웃
                         ) as response:
+                            # 응답 상태 코드 확인
                             if response.status_code != 200:
-                                error_content = await response.aread()
-                                logger.error(f"API Error: {response.status_code}, Content: {error_content.decode('utf-8')}")
+                                error_text = await response.text()
+                                logger.error(f"API error: {response.status_code}, {error_text}")
                                 yield StreamingAIResponse(
-                                    content=f"서버 오류 ({response.status_code}). 다시 시도해주세요.",
+                                    content=default_first_line,
+                                    done=False
+                                )
+                                yield StreamingAIResponse(
+                                    content=default_response[len(default_first_line):],
                                     done=True
                                 )
                                 return
                             
                             # 스트리밍 응답 처리
-                            buffer = ""
-                            async for chunk in response.aiter_bytes():
-                                try:
-                                    chunk_text = chunk.decode('utf-8')
+                            full_response = ""
+                            async for line in response.aiter_lines():
+                                if not line or line.strip() == "":
+                                    continue
                                     
-                                    # 청크가 여러 줄로 구성된 경우 각 줄을 개별적으로 처리
-                                    lines = chunk_text.split('\n')
-                                    for line in lines:
-                                        line = line.strip()
-                                        if not line:
-                                            continue
-                                        
-                                        # "data: " 접두사 제거
-                                        if line.startswith('data: '):
-                                            line = line[6:]
-                                        
-                                        # 스트림 종료 확인
-                                        if line == '[DONE]':
-                                            logger.info("Stream completed")
-                                            yield StreamingAIResponse(content="", done=True)
-                                            continue
-                                        
-                                        try:
-                                            data = json.loads(line)
-                                            if 'choices' in data and len(data['choices']) > 0:
-                                                delta = data['choices'][0].get('delta', {})
-                                                content = delta.get('content', '')
-                                                
-                                                if content:
-                                                    # 타임스탬프 제거
-                                                    if f"timestamp: {cache_buster}" in content:
-                                                        content = content.replace(f"timestamp: {cache_buster}", "").strip()
-                                                    
-                                                    buffer += content
-                                                    yield StreamingAIResponse(content=content, done=False)
-                                        except json.JSONDecodeError:
-                                            logger.warning(f"Failed to parse JSON from chunk: {line}")
-                                            continue
-                                except Exception as e:
-                                    logger.error(f"Error processing chunk: {str(e)}")
+                                if line.startswith("data: "):
+                                    line = line[6:]  # "data: " 제거
+                                    
+                                if line == "[DONE]":
+                                    break
+                                    
+                                try:
+                                    # JSON 파싱
+                                    data = json.loads(line)
+                                    
+                                    # 콘텐츠 추출
+                                    delta = data.get("choices", [{}])[0].get("delta", {})
+                                    content = delta.get("content", "")
+                                    
+                                    if content:
+                                        full_response += content
+                                        yield StreamingAIResponse(
+                                            content=content,
+                                            done=False
+                                        )
+                                except json.JSONDecodeError:
+                                    logger.warning(f"Failed to parse JSON: {line}")
                                     continue
                             
-                            # 스트림이 정상적으로 종료되지 않은 경우 완료 신호 전송
-                            yield StreamingAIResponse(content="", done=True)
-                            
-                            # 전체 응답 로깅
-                            logger.info(f"Completed streaming response, total length: {len(buffer)}")
-                            
-                            # 응답 저장을 위해 전체 텍스트 반환 (return 문 제거)
-                            # return buffer
-                
-                except httpx.ReadTimeout:
-                    logger.error("API request read timeout")
-                    yield StreamingAIResponse(content="API 응답 대기 시간이 초과되었습니다. 다시 시도해주세요.", done=True)
-                except httpx.ConnectTimeout:
-                    logger.error("API connection timeout")
-                    yield StreamingAIResponse(content="API 연결 시간이 초과되었습니다. 다시 시도해주세요.", done=True)
-                except httpx.RequestError as e:
-                    logger.error(f"Request error: {str(e)}")
-                    yield StreamingAIResponse(content=f"API 요청 오류: {str(e)}. 다시 시도해주세요.", done=True)
+                            # 스트리밍 완료 후 전체 응답 저장
+                            if full_response:
+                                logger.info(f"Streaming completed for session: {session_id}")
+                                
+                                # 임시 세션에 AI 응답 저장
+                                if temp_session_service:
+                                    logger.info("Updating stretching AI response in temp session")
+                                    await temp_session_service.update_stretching_ai_response(
+                                        session_id=session_id,
+                                        stretching_id=stretching_id,
+                                        ai_response=full_response
+                                    )
+                                
+                                # 로그인한 사용자의 경우 히스토리에도 저장
+                                if current_user and user_service:
+                                    logger.info(f"Saving stretching session to user history: {current_user.id}")
+                                    # 완성된 스트레칭 세션 객체 생성
+                                    from app.schemas.session import StretchingSession
+                                    stretching_session = StretchingSession(
+                                        id=stretching_id,
+                                        created_at=datetime.utcnow(),
+                                        user_input=user_input,
+                                        ai_response=full_response
+                                    )
+                                    
+                                    # 사용자 히스토리에 저장
+                                    await user_service.add_stretching_session(
+                                        user_id=current_user.id,
+                                        stretching_session=stretching_session.model_dump()
+                                    )
+                                
+                                # 완료 신호 전송
+                                yield StreamingAIResponse(
+                                    content="",
+                                    done=True
+                                )
+                            else:
+                                logger.warning(f"Empty response for session: {session_id}")
+                                yield StreamingAIResponse(
+                                    content=default_response,
+                                    done=True
+                                )
+                                
                 except Exception as e:
-                    logger.error(f"Unexpected error in streaming: {str(e)}", exc_info=True)
-                    yield StreamingAIResponse(content="오류가 발생했습니다. 다시 시도해주세요.", done=True)
-        
+                    logger.error(f"API request error: {str(e)}")
+                    yield StreamingAIResponse(
+                        content=default_response,
+                        done=True
+                    )
+                
         except Exception as e:
-            logger.error(f"Error in generate_stretching_guide_stream: {str(e)}", exc_info=True)
-            yield StreamingAIResponse(content="오류가 발생했습니다. 다시 시도해주세요.", done=True) 
+            logger.error(f"Error in generate_stretching_guide_stream: {str(e)}")
+            yield StreamingAIResponse(
+                content="오류가 발생했습니다. 다시 시도해주세요.",
+                done=True
+            ) 
