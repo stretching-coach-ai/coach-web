@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 스트레칭 데이터의 임베딩을 생성하고 파일로 저장하는 스크립트
+BGE 모델을 이용한 버전
 """
 import json
 import os
@@ -17,7 +18,7 @@ def create_embeddings():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     base_dir = os.path.dirname(os.path.dirname(script_dir))
     data_path = os.path.join(base_dir, "backend", "data", "data.json")  # final_data.json에서 data.json으로 변경
-    output_path = os.path.join(base_dir, "backend", "data", "embeddings.json")
+    output_path = os.path.join(base_dir, "backend", "data", "embeddings_bge.json")  # BGE 모델용 파일명 변경
     
     # 경로가 올바른지 확인하고 필요시 조정
     if not os.path.exists(data_path):
@@ -25,10 +26,10 @@ def create_embeddings():
         current_dir = os.getcwd()
         if current_dir.endswith('backend'):
             data_path = os.path.join(current_dir, "data", "data.json")  # final_data.json에서 data.json으로 변경
-            output_path = os.path.join(current_dir, "data", "embeddings.json")
+            output_path = os.path.join(current_dir, "data", "embeddings_bge.json")  # BGE 모델용 파일명 변경
         elif current_dir.endswith('scripts'):
             data_path = os.path.join(os.path.dirname(current_dir), "data", "data.json")  # final_data.json에서 data.json으로 변경
-            output_path = os.path.join(os.path.dirname(current_dir), "data", "embeddings.json")
+            output_path = os.path.join(os.path.dirname(current_dir), "data", "embeddings_bge.json")  # BGE 모델용 파일명 변경
     
     print(f"데이터 파일 경로: {data_path}")
     print(f"임베딩 저장 경로: {output_path}")
@@ -41,9 +42,10 @@ def create_embeddings():
     with open(data_path, "r", encoding="utf-8") as f:
         data = json.load(f)
     
-    # 3. 모델 로드
-    print("LaBSE 모델 로드 중...")
-    model = SentenceTransformer('sentence-transformers/LaBSE')
+    # 3. 모델 로드 - BGE 모델로 변경
+    print("BGE 모델 로드 중...")
+    # 다국어(영어+중국어) 지원 모델을 선택했지만, 한국어에 더 적합한 다른 모델로 대체 가능
+    model = SentenceTransformer('BAAI/bge-large-zh-v1.5')
     print("모델 로드 완료!")
     
     # 4. 임베딩 생성

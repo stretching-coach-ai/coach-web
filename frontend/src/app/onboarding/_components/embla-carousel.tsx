@@ -21,10 +21,10 @@ export const EmbalCarousel = () => {
 
   return (
     <section
-      className={`${Stardust.className} mt-9 w-[390px] flex flex-col items-center m-auto embla`}
+      className={`${Stardust.className} w-full flex flex-col items-center embla`}
     >
-      <div className="embla__controls">
-        <div className="embla__dots">
+      <div className="embla__controls mt-9 mb-6">
+        <div className="embla__dots flex items-center">
           {scrollSnaps.map((_, index) => (
             <React.Fragment key={index}>
               <DotButton
@@ -48,10 +48,10 @@ export const EmbalCarousel = () => {
           ))}
         </div>
       </div>
-      <div className="embla__viewport" ref={emblaRef}>
+      <div className="embla__viewport w-full" ref={emblaRef}>
         <div className="embla__container">
           {SLIDES.map((index) => (
-            <div className="embla__slide" key={index}>
+            <div className={`embla__slide w-full ${index === 0 ? '' : 'px-4'}`} key={index}>
               {index === 0 && (
                 <UserInfoForm onDotButtonClick={onDotButtonClick} />
               )}
