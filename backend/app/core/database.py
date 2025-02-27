@@ -39,7 +39,7 @@ class MongoManager:
     @classmethod
     def get_db(cls):
         """데이터베이스 객체 반환"""
-        if not cls.db:
+        if cls.db is None:
             logger.warning("MongoDB connection not initialized, attempting to connect")
             cls.client = AsyncIOMotorClient(settings.MONGODB_URL)
             cls.db = cls.client[settings.MONGODB_DB_NAME]
@@ -56,3 +56,14 @@ class MongoManager:
         """필요한 경우 DB 초기화"""
         if settings.MONGODB_INIT_MODE == "create":
             pass  # 여기에 초기화 로직 추가 가능
+
+    # 별칭 메서드 추가
+    @classmethod
+    async def connect(cls):
+        """connect_to_mongo의 별칭"""
+        return await cls.connect_to_mongo()
+    
+    @classmethod
+    async def close(cls):
+        """close_mongo_connection의 별칭"""
+        await cls.close_mongo_connection()
