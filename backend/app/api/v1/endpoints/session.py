@@ -684,3 +684,81 @@ async def get_popular_stretches(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error getting popular stretches: {str(e)}"
         )
+
+@router.get("/recent-activities", response_model=list)
+async def get_recent_activities(
+    request: Request,
+    limit: int = 5,
+    user_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    db = Depends(get_db)
+):
+    """
+    사용자의 최근 활동을 반환합니다.
+    로그인한 사용자는 user_id로, 비로그인 사용자는 session_id로 조회합니다.
+    """
+    try:
+        query = {}
+        
+        # 로그인한 사용자인 경우
+        if user_id:
+            query["user_id"] = user_id
+        # 비로그인 사용자인 경우
+        elif session_id:
+            # 세션 ID로 임시 세션 조회
+            temp_session = await db["temp_sessions"].find_one({"session_id": session_id})
+            if not temp_session:
+                return []
+                
+            # 해당 세션의 AI 요청 조회
+            query["session_id"] = session_id
+        else:
+            # 둘 다 없는 경우 빈 배열 반환
+            return []
+            
+        # 최근 활동 조회
+        recent_activities = await db["ai_requests"].find(
+            query
+        ).sort("created_at", -1).limit(limit).to_list(length=limit)
+        
+        # 결과 포맷팅
+        result = []
+        for idx, activity in enumerate(recent_activities):
+            # 활동 시간 포맷팅
+            created_at = activity.get("created_at", datetime.now())
+            
+            # 사용자 입력에서 선택한 부위 추출
+            user_input = activity.get("user_input", {})
+            selected_body_parts = user_input.get("selected_body_parts", "전신")
+            
+            # AI 응답에서 제목 추출
+            ai_response = activity.get("ai_response", "")
+            title = "스트레칭 세션"
+            
+            # 간단한 파싱 로직
+            if ai_response:
+                lines = ai_response.split('\n')
+                for i, line in enumerate(lines):
+                    if "추천 스트레칭:" in line or "스트레칭:" in line:
+                        if i+1 < len(lines) and lines[i+1].strip():
+                            title = lines[i+1].strip()
+                            if title.startswith('-') or title.startswith('1.'):
+                                title = title[title.find(' ')+1:]
+                        break
+            
+            result.append({
+                "id": str(activity.get("_id", idx)),
+                "title": title,
+                "time": created_at.strftime("%Y-%m-%d %H:%M"),
+                "duration": "5-10분",
+                "target": selected_body_parts,
+                "created_at": created_at
+            })
+        
+        return result
+    except Exception as e:
+        print(f"Error getting recent activities: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting recent activities: {str(e)}"
+        )
