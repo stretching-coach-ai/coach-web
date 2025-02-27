@@ -1,0 +1,45 @@
+{
+  "consistency_test": {
+    "labse": {
+      "overall_consistency": true,
+      "consistency_by_query": {
+        "목이 뻐근하고 어깨가 무겁습니다": true,
+        "컴퓨터 작업 후 허리가 아파요": true,
+        "손목이 자주 저리고 아픕니다": true
+      },
+      "avg_execution_time": 0.038851801554361985
+    },
+    "bge": {
+      "overall_consistency": true,
+      "consistency_by_query": {
+        "목이 뻐근하고 어깨가 무겁습니다": true,
+        "컴퓨터 작업 후 허리가 아파요": true,
+        "손목이 자주 저리고 아픕니다": true
+      },
+      "avg_execution_time": 0.031310447057088214
+    }
+  },
+  "variation_test": {
+    "labse": {
+      "avg_robustness": 51.85185185185185,
+      "robustness_by_query": {
+        "목이 뻐근하고 어깨가 무겁습니다": 33.33333333333333,
+        "컴퓨터 작업 후 허리가 아파요": 22.222222222222218,
+        "손목이 자주 저리고 아픕니다": 100.0
+      }
+    },
+    "bge": {
+      "avg_robustness": 85.18518518518518,
+      "robustness_by_query": {
+        "목이 뻐근하고 어깨가 무겁습니다": 88.88888888888887,
+        "컴퓨터 작업 후 허리가 아파요": 66.66666666666666,
+        "손목이 자주 저리고 아픕니다": 100.0
+      }
+    }
+  },
+  "conclusion": {
+    "consistency_winner": "tie",
+    "variation_robustness_winner": "bge",
+    "speed_winner": "bge"
+  }
+}
