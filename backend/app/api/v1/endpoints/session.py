@@ -4,6 +4,7 @@ from fastapi import APIRouter, Response, HTTPException, Cookie, Depends
 from fastapi.responses import StreamingResponse
 from app.services.temp_session_service import TempSessionService
 from app.services.helpy_pro_service import HelpyProService
+from app.services.openai_streaming_service import OpenAIStreamingService
 from app.services.user_service import UserService
 from app.schemas.user_input import UserInput
 from app.schemas.ai_response import AIResponse, StreamingAIResponse
@@ -225,6 +226,93 @@ async def create_stretching_session_stream(
         
     except Exception as e:
         logger.error(f"Error in create_stretching_session_stream: {str(e)}", exc_info=True)
+        raise
+
+@router.post("/sessions/{session_id}/stretching/stream-openai")
+async def create_stretching_session_stream_openai(
+    session_id: str,
+    user_input: UserInput,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """새로운 스트레칭 세션 생성 및 OpenAI를 사용한 AI 가이드 생성 (스트리밍 방식)"""
+    try:
+        logger.info(f"Creating OpenAI streaming stretching session for session_id: {session_id}")
+        logger.debug(f"User input: {user_input.dict()}")
+        
+        # 0. 임베딩 서비스 초기화 확인
+        await EmbeddingService.initialize()
+        
+        # 1. 임베딩 검색으로 관련 스트레칭 찾기
+        logger.info("Searching for relevant stretching exercises")
+        body_parts = [part.strip() for part in user_input.selected_body_parts.split(',')]
+        relevant_exercises = await EmbeddingService.search(
+            query=user_input.pain_description,
+            body_parts=body_parts,
+            occupation=user_input.occupation,
+            top_k=3
+        )
+        
+        logger.info(f"Found {len(relevant_exercises)} relevant exercises")
+        
+        # 2. 세션에 스트레칭 기록 추가
+        logger.info("Adding stretching session to database")
+        updated_session = await TempSessionService.add_stretching_session(
+            session_id=session_id,
+            user_input=user_input
+        )
+        
+        if not updated_session:
+            logger.error(f"Session not found: {session_id}")
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # 3. 생성된 스트레칭 세션의 ID 찾기
+        latest_stretching = updated_session.stretching_sessions[-1]
+        stretching_id = latest_stretching.id
+        logger.info(f"Created stretching session with ID: {stretching_id}")
+        
+        # 4. OpenAI를 사용한 AI 가이드 스트리밍 생성
+        logger.info("Generating AI guide with OpenAI (streaming)")
+        
+        # SSE 형식으로 변환하는 내부 함수 정의
+        async def format_as_sse():
+            try:
+                logger.info("Starting OpenAI SSE stream for stretching guide")
+                async for chunk in OpenAIStreamingService.generate_stretching_guide_stream(
+                    session_id=session_id,
+                    stretching_id=stretching_id,
+                    user_input=user_input,
+                    relevant_exercises=relevant_exercises,
+                    temp_session_service=TempSessionService,
+                    user_service=user_service,
+                    current_user=current_user
+                ):
+                    # StreamingAIResponse를 SSE 형식으로 변환
+                    data = json.dumps({"content": chunk.content, "done": chunk.done})
+                    sse_message = f"data: {data}\n\n"
+                    logger.debug(f"Sending OpenAI SSE chunk: content_length={len(chunk.content)}, done={chunk.done}")
+                    logger.debug(f"SSE message format: {sse_message[:50]}...")
+                    yield sse_message
+                
+                logger.info("OpenAI SSE stream completed successfully")
+            except Exception as e:
+                logger.error(f"Error in OpenAI SSE stream: {str(e)}", exc_info=True)
+                error_data = json.dumps({"content": "OpenAI 스트리밍 중 오류가 발생했습니다. 다시 시도해주세요.", "done": True})
+                yield f"data: {error_data}\n\n"
+        
+        # 스트리밍 응답 반환
+        logger.info("Returning OpenAI StreamingResponse with SSE media type")
+        return StreamingResponse(
+            format_as_sse(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"  # Nginx 버퍼링 비활성화
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in create_stretching_session_stream_openai: {str(e)}", exc_info=True)
         raise
 
 @router.get("/muscles")
