@@ -16,7 +16,7 @@ const select = () => {
   const handleGuestLoging = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/v1/sessions/', {
+      const response = await fetch('http://localhost:8000/api/v1/sessions/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -65,7 +65,7 @@ const select = () => {
           </div>
           <div className={`${Stardust.className} mt-[86px]`}>
             <Button variant="main" size="main" className="text-[18px]">
-              <Link className="w-full" href="/login">
+              <Link className="w-full" href="/auth/login">
                 로그인
               </Link>
             </Button>
