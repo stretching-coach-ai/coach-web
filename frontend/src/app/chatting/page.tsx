@@ -19,9 +19,12 @@ export default function ChatUI() {
 
   const fetchSessionId = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/v1/auth/me', {
-        withCredentials: true,
-      });
+      const response = await axios.get(
+        'http://localhost:8000/api/v1/sessions/current',
+        {
+          withCredentials: true,
+        },
+      );
       console.log(response.data);
       return response.data.session_id; // 서버에서 session_id 반환해야 함
     } catch (error) {
@@ -41,13 +44,35 @@ export default function ChatUI() {
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
 
-    const session_id = await fetchSessionId(); // 백엔드에서 세션 ID 가져오기
-    if (!session_id) {
-      console.error('세션 ID를 찾을 수 없습니다.');
+    let session_id;
+    try {
+      session_id = await fetchSessionId(); // 백엔드에서 세션 ID 가져오기
+      if (!session_id) {
+        // If no session exists, create one
+        const createResponse = await axios.post(
+          'http://localhost:8000/api/v1/sessions',
+          {},
+          {
+            withCredentials: true,
+          },
+        );
+        session_id = createResponse.data.session_id;
+        console.log('New session created:', session_id);
+      }
+    } catch (error) {
+      console.error('세션 처리 중 오류:', error);
+
+      // Add a bot message to inform the user
+      const errorMessage = {
+        id: messages.length + 2,
+        text: '서버 연결에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        sender: 'bot',
+      };
+      setMessages((prev) => [...prev, errorMessage]);
       return;
     }
 
-    console.log('세션 ID:', session_id);
+    console.log('사용할 세션 ID:', session_id);
 
     const storedUserInfo = localStorage.getItem('userInfo');
     if (!storedUserInfo) {
@@ -56,15 +81,16 @@ export default function ChatUI() {
     }
 
     const userInfo = JSON.parse(storedUserInfo);
+
+    if (!['male', 'female'].includes(userInfo.gender)) {
+      console.error('gender 값이 유효하지 않습니다:', userInfo.gender);
+      return;
+    }
+
     const payload = {
       age: parseInt(userInfo.age, 10),
       gender: userInfo.gender,
-      lifestyle: {
-        exercise_frequency: 0,
-        sitting_hours: 10,
-        sleep_hours: 7,
-        work_hours: 0,
-      },
+      lifestyle: userInfo.dailyRoutine,
       occupation: userInfo.job,
       pain_description: input,
       pain_level: 5, // 기본값 설정 (사용자 입력 받도록 변경 가능)
@@ -72,7 +98,8 @@ export default function ChatUI() {
     };
 
     try {
-      const url = `http://localhost:8000/api/v1/4${session_id}/stretching`;
+      // FIX: Fix the URL structure
+      const url = `http://localhost:8000/api/v1/sessions/${session_id}/stretching`;
       console.log('API 요청 URL:', url);
 
       const response = await axios.post(url, payload, {
@@ -82,7 +109,7 @@ export default function ChatUI() {
 
       const botReply = {
         id: messages.length + 2,
-        text: response.data.message || '추천 스트레칭을 확인하세요.',
+        text: response.data.text || '추천 스트레칭을 확인하세요.', // Changed from 'message' to 'text' based on backend response
         sender: 'bot',
       };
       setMessages((prev) => [...prev, botReply]);
@@ -91,6 +118,14 @@ export default function ChatUI() {
         'API 요청 실패:',
         error.response ? error.response.data : error.message,
       );
+
+      // Add a bot message to inform the user
+      const errorMessage = {
+        id: messages.length + 2,
+        text: '스트레칭 정보를 가져오는 데 실패했습니다. 다시 시도해주세요.',
+        sender: 'bot',
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     }
   };
 
