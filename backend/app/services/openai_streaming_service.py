@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.schemas.user_input import UserInput
 from app.schemas.ai_response import AIResponse, StreamingAIResponse
 from app.services.helpy_pro_service import HelpyProService
+from app.services.embedding_service import EmbeddingService
 
 # 로거 설정
 logger = logging.getLogger(__name__)
@@ -26,6 +27,34 @@ class OpenAIStreamingService:
     _semaphore = asyncio.Semaphore(50)  # 최대 50개의 동시 요청 허용
     
     @classmethod
+    def _get_system_prompt(cls) -> str:
+        """시스템 프롬프트 생성"""
+        return """당신은 스트레칭 전문가이자 물리치료사입니다. 
+JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를 활용해 분석과 가이드를 제공하세요.
+
+다음 원칙을 따라주세요:
+1. 제공된 메타데이터를 최대한 활용하여 상세하고 정확한 스트레칭 가이드를 작성하세요.
+2. 학술적 근거가 있는 경우 반드시 포함하고 출처를 명시하세요.
+3. 사용자의 상태, 직업, 생활 습관을 고려한 맞춤형 가이드를 제공하세요.
+4. 각 스트레칭 동작에 대해 단계별 지침, 호흡법, 반복 횟수를 명확히 설명하세요.
+5. 필요한 경우 추가 정보를 찾아 포함하세요.
+6. 참고 자료 섹션에 사용된 학술 자료나 스트레칭 정보의 출처 URL을 포함하세요.
+
+응답 형식:
+[분석]
+- 상태: (사용자의 현재 상태 분석)
+- 위험: (지속될 경우의 위험 요소)
+- 개선점: (개선을 위한 방향)
+
+[가이드]
+- 스트레칭: (구체적인 스트레칭 방법 3-5개)
+- 생활수칙: (일상생활에서의 개선 방법)
+- 주의사항: (스트레칭 시 주의할 점)
+
+[참고 자료]
+- (사용된 학술 자료 및 출처 URL)"""
+    
+    @classmethod
     async def generate_stretching_guide_stream(
         cls, 
         session_id: str,
@@ -39,6 +68,21 @@ class OpenAIStreamingService:
         """스트레칭 가이드 생성 (스트리밍 방식)"""
         try:
             logger.info(f"Generating streaming stretching guide with OpenAI for session: {session_id}")
+            
+            # 임베딩 검색 결과가 없는 경우 검색 수행
+            if not relevant_exercises or len(relevant_exercises) == 0:
+                logger.info("임베딩 검색 수행 중...")
+                body_parts = [part.strip() for part in user_input.selected_body_parts.split(',')]
+                relevant_exercises = await EmbeddingService.search(
+                    query=user_input.pain_description,
+                    body_parts=body_parts,
+                    occupation=user_input.occupation,
+                    top_k=3
+                )
+                logger.info(f"임베딩 검색 완료: {len(relevant_exercises)}개 결과 찾음")
+                # 검색 결과 로깅
+                for i, exercise in enumerate(relevant_exercises):
+                    logger.debug(f"검색 결과 {i+1}: {exercise.get('exercise', {}).get('title', '제목 없음')} - 유사도: {exercise.get('similarity', 0)}")
             
             # 사용자 입력 및 관련 운동 정보를 기반으로 프롬프트 생성 (HelpyProService와 동일한 프롬프트 사용)
             prompt = HelpyProService._create_prompt(user_input, relevant_exercises)
@@ -66,30 +110,7 @@ class OpenAIStreamingService:
                     "messages": [
                         {
                             "role": "system",
-                            "content": """당신은 스트레칭 전문가이자 물리치료사입니다. 
-JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를 활용해 분석과 가이드를 제공하세요.
-
-다음 원칙을 따라주세요:
-1. 제공된 메타데이터를 최대한 활용하여 상세하고 정확한 스트레칭 가이드를 작성하세요.
-2. 학술적 근거가 있는 경우 반드시 포함하고 출처를 명시하세요.
-3. 사용자의 상태, 직업, 생활 습관을 고려한 맞춤형 가이드를 제공하세요.
-4. 각 스트레칭 동작에 대해 단계별 지침, 호흡법, 반복 횟수를 명확히 설명하세요.
-5. 필요한 경우 추가 정보를 찾아 포함하세요.
-6. 참고 자료 섹션에 사용된 학술 자료나 스트레칭 정보의 출처 URL을 포함하세요.
-
-응답 형식:
-[분석]
-- 상태: (사용자의 현재 상태 분석)
-- 위험: (지속될 경우의 위험 요소)
-- 개선점: (개선을 위한 방향)
-
-[가이드]
-- 스트레칭: (구체적인 스트레칭 방법 3-5개)
-- 생활수칙: (일상생활에서의 개선 방법)
-- 주의사항: (스트레칭 시 주의할 점)
-
-[참고 자료]
-- (사용된 학술 자료 및 출처 URL)"""
+                            "content": cls._get_system_prompt()
                         },
                         {
                             "role": "user",
