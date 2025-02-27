@@ -4,6 +4,7 @@ from app.core.config import settings
 from app.core.database import MongoManager
 from app.api.v1.endpoints.users import router as users_router
 from app.api.v1.endpoints.session import router as session_router
+from app.api.v1.endpoints.session import router as muscles_router  # muscles 라우터로 session 라우터 재사용
 from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.health_profiles import router as health_profiles_router
 from app.api.v1.endpoints.body_conditions import router as body_conditions_router
@@ -65,8 +66,15 @@ app.include_router(
 
 app.include_router(
     session_router,
-    prefix=settings.API_V1_PREFIX,
+    prefix=f"{settings.API_V1_PREFIX}/session",
     tags=["session"]
+)
+
+# muscles 라우터 추가 - session_router에서 muscles 관련 엔드포인트 재사용
+app.include_router(
+    muscles_router,
+    prefix=settings.API_V1_PREFIX,
+    tags=["muscles"]
 )
 
 # auth 라우터는 /api/v1/auth 접두사로 변경

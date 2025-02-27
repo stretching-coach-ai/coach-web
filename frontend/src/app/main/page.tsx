@@ -23,6 +23,11 @@ const MainPage = () => {
   const [user, setUser] = useState<any>(null);
   const [sessionLoading, setSessionLoading] = useState(false);
   const [allExpanded, setAllExpanded] = useState(false);
+  const [recommendedStretchings, setRecommendedStretchings] = useState<any[]>([]);
+  const [recentStretchings, setRecentStretchings] = useState<any[]>([]);
+  const [loadingRecommended, setLoadingRecommended] = useState(false);
+  const [loadingRecent, setLoadingRecent] = useState(false);
+  const [expandedRecommendation, setExpandedRecommendation] = useState<string | null>(null);
   
   // 캐릭터 애니메이션 토글
   const toggleCharacterAnimation = () => {
@@ -255,43 +260,132 @@ const MainPage = () => {
     }
   };
   
-  // 추천 스트레칭 데이터
-  const recommendedStretchings = [
-    { 
-      id: 1, 
-      title: '아침 활력 스트레칭', 
-      duration: '15분', 
-      target: '전신',
-      image: 'morning', 
-      color: 'from-amber-400 to-orange-500',
-      description: '하루를 활기차게 시작하는 전신 스트레칭 루틴으로 몸의 혈액순환을 촉진하고 에너지를 불어넣어 보세요.'
-    },
-    { 
-      id: 2, 
-      title: '목 & 어깨 릴랙스', 
-      duration: '10분', 
-      target: '상체',
-      image: 'neck', 
-      color: 'from-sky-400 to-blue-500',
-      description: '장시간 컴퓨터 작업으로 인한 목과 어깨의 긴장을 완화하고 통증을 줄이는 집중 스트레칭입니다.'
-    },
-    { 
-      id: 3, 
-      title: '코어 강화 루틴', 
-      duration: '12분', 
-      target: '복부/등',
-      image: 'core', 
-      color: 'from-lime-400 to-green-500',
-      description: '몸의 중심부를 강화하여 자세를 개선하고 일상 활동에서의 안정성을 높이는 스트레칭 시퀀스입니다.'
+  // 오늘의 추천 스트레칭 가져오기
+  const fetchRecommendedStretchings = async () => {
+    try {
+      setLoadingRecommended(true);
+      const response = await fetch('/api/v1/session/popular-stretches');
+      if (response.ok) {
+        const data = await response.json();
+        setRecommendedStretchings(data);
+      } else {
+        console.error('추천 스트레칭을 가져오는데 실패했습니다:', response.status);
+        // 기본 데이터 설정
+        setRecommendedStretchings([
+          {
+            id: '1',
+            title: '목 스트레칭',
+            short_description: '장시간 앉아있는 사람들을 위한 목 스트레칭',
+            color: 'from-green-400 to-green-600',
+            guide: { duration: '5-10분' },
+            target: '목',
+            level: '초급',
+            condition: '거북목'
+          },
+          {
+            id: '2',
+            title: '어깨 스트레칭',
+            short_description: '어깨 통증 완화를 위한 스트레칭',
+            color: 'from-blue-400 to-blue-600',
+            guide: { duration: '5-10분' },
+            target: '어깨',
+            level: '중급',
+            condition: '어깨 통증'
+          },
+          {
+            id: '3',
+            title: '허리 스트레칭',
+            short_description: '허리 통증 완화를 위한 스트레칭',
+            color: 'from-purple-400 to-purple-600',
+            guide: { duration: '5-10분' },
+            target: '허리',
+            level: '초급',
+            condition: '요통'
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error('추천 스트레칭을 가져오는 중 오류 발생:', error);
+      // 기본 데이터 설정
+      setRecommendedStretchings([
+        {
+          id: '1',
+          title: '목 스트레칭',
+          short_description: '장시간 앉아있는 사람들을 위한 목 스트레칭',
+          color: 'from-green-400 to-green-600',
+          guide: { duration: '5-10분' },
+          target: '목',
+          level: '초급',
+          condition: '거북목'
+        },
+        {
+          id: '2',
+          title: '어깨 스트레칭',
+          short_description: '어깨 통증 완화를 위한 스트레칭',
+          color: 'from-blue-400 to-blue-600',
+          guide: { duration: '5-10분' },
+          target: '어깨',
+          level: '중급',
+          condition: '어깨 통증'
+        },
+        {
+          id: '3',
+          title: '허리 스트레칭',
+          short_description: '허리 통증 완화를 위한 스트레칭',
+          color: 'from-purple-400 to-purple-600',
+          guide: { duration: '5-10분' },
+          target: '허리',
+          level: '초급',
+          condition: '요통'
+        }
+      ]);
+    } finally {
+      setLoadingRecommended(false);
     }
-  ];
+  };
   
-  // 최근 스트레칭 데이터
-  const recentStretchings = [
-    { id: 1, title: '취침 전 릴랙스', time: '어제', duration: '8분' },
-    { id: 2, title: '오전 활력 루틴', time: '2일 전', duration: '15분' },
-    { id: 3, title: '하체 스트레칭', time: '3일 전', duration: '12분' }
-  ];
+  // 최근 활동 가져오기
+  const fetchRecentActivities = async () => {
+    try {
+      setLoadingRecent(true);
+      
+      // 사용자 ID 또는 세션 ID 파라미터 설정
+      let url = '/api/v1/session/recent-activities';
+      if (user && user.id) {
+        url += `?user_id=${user.id}`;
+      } else if (sessionId) {
+        url += `?session_id=${sessionId}`;
+      }
+      
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        setRecentStretchings(data);
+      } else {
+        console.error('최근 활동을 가져오는데 실패했습니다:', response.status);
+        // 기본 데이터 설정
+        setRecentStretchings([]);
+      }
+    } catch (error) {
+      console.error('최근 활동을 가져오는 중 오류 발생:', error);
+      // 기본 데이터 설정
+      setRecentStretchings([]);
+    } finally {
+      setLoadingRecent(false);
+    }
+  };
+  
+  // 페이지 로드 시 데이터 가져오기
+  useEffect(() => {
+    fetchRecommendedStretchings();
+  }, []);
+  
+  // 사용자 정보 또는 세션 ID가 변경될 때 최근 활동 가져오기
+  useEffect(() => {
+    if (user || sessionId) {
+      fetchRecentActivities();
+    }
+  }, [user, sessionId]);
   
   // 근육을 카테고리별로 분류 - 컴포넌트 외부로 이동하여 재사용 가능하게 함
   const muscleCategories = {
@@ -415,8 +509,45 @@ const MainPage = () => {
     }
   };
   
+  // 추천 스트레칭 상세 정보 토글
+  const toggleRecommendationDetails = (id: string) => {
+    setExpandedRecommendation(prev => prev === id ? null : id);
+  };
+  
   return (
     <div className="pb-20 max-w-md mx-auto bg-gray-50 min-h-screen">
+      <style jsx global>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-slideDown {
+          animation: slideDown 0.3s ease-out forwards;
+        }
+        
+        .animate-slideUp {
+          animation: slideUp 0.3s ease-out forwards;
+        }
+      `}</style>
+      
       {/* 전체 콘텐츠를 감싸는 하얀색 박스 */}
       <div className="bg-white rounded-xl shadow-sm mx-2 my-3">
         {/* 헤더 영역 - 인터랙티브한 디자인으로 개선 */}
@@ -509,33 +640,172 @@ const MainPage = () => {
               </h2>
             </div>
             
-            <div className="space-y-4">
-              {recommendedStretchings.slice(0, 3).map((item) => (
-                <div 
-                  key={item.id}
-                  className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-300 hover:border-[#93D400] transform hover:translate-y-[-2px]"
-                >
-                  <div className={`h-16 bg-gradient-to-r ${item.color} flex items-center p-4`}>
-                    <div className="text-white">
-                      <h3 className="font-bold">{item.title}</h3>
-                      <div className="flex items-center text-xs mt-1">
-                        <Clock className="w-3 h-3 mr-1" />
-                        {item.duration}
-                        <span className="mx-2">•</span>
-                        <span>{item.target}</span>
+            {loadingRecommended ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6B925C]"></div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recommendedStretchings.length > 0 ? (
+                  recommendedStretchings.map((item) => (
+                    <div 
+                      key={item.id}
+                      className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-300 hover:border-[#93D400] transform hover:translate-y-[-2px]"
+                    >
+                      <div className={`h-auto bg-gradient-to-r ${item.color} flex flex-col p-4`}>
+                        <div className="text-white">
+                          <div className="flex justify-between items-center">
+                            <h3 className="font-bold text-lg">{item.title}</h3>
+                            <div className="flex space-x-2">
+                              <span className="bg-white bg-opacity-30 text-white text-xs px-2 py-1 rounded-full">
+                                {item.condition}
+                              </span>
+                              <span className="bg-white bg-opacity-30 text-white text-xs px-2 py-1 rounded-full">
+                                {item.level}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center text-xs mt-2">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {item.guide?.duration || '5-10분'}
+                            <span className="mx-2">•</span>
+                            <span>{item.target}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <p className="text-sm text-gray-600 mb-3">{item.short_description}</p>
+                        
+                        <div className="mb-3">
+                          <h4 className="text-sm font-semibold mb-1">주요 효과</h4>
+                          <div className="flex flex-wrap gap-1">
+                            {item.effects && item.effects.length > 0 ? (
+                              item.effects.map((effect: string, index: number) => (
+                                <span key={index} className="text-xs bg-[#F9FFEB] text-[#6B925C] px-2 py-1 rounded-full">
+                                  {effect}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs bg-[#F9FFEB] text-[#6B925C] px-2 py-1 rounded-full">
+                                통증 완화
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <button 
+                          onClick={() => toggleRecommendationDetails(item.id)}
+                          className="w-full mt-2 text-sm font-medium text-white bg-[#6B925C] py-2 rounded-lg flex items-center justify-center group hover:bg-[#5A7F4B] transition-colors"
+                        >
+                          {expandedRecommendation === item.id ? "접기" : "자세히 보기"}
+                          {expandedRecommendation === item.id ? 
+                            <ChevronUp className="w-3 h-3 ml-1" /> : 
+                            <ArrowRight className="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" />
+                          }
+                        </button>
+                        
+                        {/* 상세 정보 영역 */}
+                        {expandedRecommendation === item.id && (
+                          <div className="mt-4 pt-3 border-t border-gray-200 animate-slideDown">
+                            {/* 전체 수행 방법 */}
+                            {item.steps && item.steps.length > 0 && (
+                              <div className="mb-4">
+                                <h4 className="text-sm font-semibold mb-2">전체 수행 방법</h4>
+                                <ol className="text-sm text-gray-600 space-y-2 pl-2">
+                                  {item.steps.map((step: string, index: number) => (
+                                    <li key={index} className="flex">
+                                      <span className="bg-[#E5FFA9] text-[#6B925C] w-5 h-5 rounded-full flex items-center justify-center mr-2 flex-shrink-0">
+                                        {index + 1}
+                                      </span>
+                                      <span>{step}</span>
+                                    </li>
+                                  ))}
+                                </ol>
+                              </div>
+                            )}
+                            
+                            {/* 추천 가이드 */}
+                            <div className="mb-4 bg-[#F9FFEB] p-3 rounded-lg">
+                              <h4 className="text-sm font-semibold mb-2">추천 가이드</h4>
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div className="flex items-center">
+                                  <Clock className="w-4 h-4 mr-2 text-[#6B925C]" />
+                                  <span>유지: {item.guide?.hold || '10-15초'}</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <Repeat className="w-4 h-4 mr-2 text-[#6B925C]" />
+                                  <span>반복: {item.guide?.repetitions || '3-5회'}</span>
+                                </div>
+                                <div className="flex items-center col-span-2">
+                                  <Calendar className="w-4 h-4 mr-2 text-[#6B925C]" />
+                                  <span>빈도: {item.guide?.frequency || '매일 1-2회'}</span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* 주의사항 */}
+                            {item.cautions && item.cautions.length > 0 && (
+                              <div className="mb-4 bg-[#FFF0F0] p-3 rounded-lg">
+                                <h4 className="text-sm font-semibold mb-2 text-[#FF6B6B]">주의사항</h4>
+                                <ul className="text-sm text-gray-600 space-y-1 pl-2">
+                                  {item.cautions.map((caution: string, index: number) => (
+                                    <li key={index} className="list-disc list-inside">{caution}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            
+                            {/* 적용 대상 */}
+                            {item.target_audience && (
+                              <div className="mb-4">
+                                <h4 className="text-sm font-semibold mb-2">적용 대상</h4>
+                                <p className="text-sm text-gray-600">{item.target_audience}</p>
+                              </div>
+                            )}
+                            
+                            {/* 관련 자료 */}
+                            {item.reference_url && (
+                              <div className="pt-2 border-t border-gray-200">
+                                <h4 className="text-sm font-semibold mb-1">관련 문서</h4>
+                                <a 
+                                  href={item.reference_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center text-sm text-blue-500 hover:underline"
+                                >
+                                  <ExternalLink className="w-3 h-3 mr-1" />
+                                  <span>참고 자료</span>
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                  <div className="p-3">
-                    <p className="text-sm text-gray-600 line-clamp-2">{item.description}</p>
-                    <button className="mt-2 text-sm font-medium text-[#6B925C] flex items-center group">
-                      자세히 보기 
-                      <ArrowRight className="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" />
+                  ))
+                ) : (
+                  <div className="bg-white rounded-xl p-6 shadow-sm text-center border border-gray-100">
+                    <div className="w-16 h-16 mx-auto mb-3 opacity-50">
+                      <Image
+                        src="/images/empty-state.png"
+                        alt="추천 없음"
+                        width={64}
+                        height={64}
+                        className="object-contain"
+                      />
+                    </div>
+                    <p className="text-gray-500 mb-3">아직 추천 스트레칭이 없습니다.</p>
+                    <button 
+                      onClick={createSession}
+                      className="bg-[#6B925C] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#5A7F4B] transition-colors flex items-center mx-auto"
+                    >
+                      <span>첫 스트레칭 시작하기</span>
+                      <ArrowRight className="w-4 h-4 ml-1.5" />
                     </button>
                   </div>
-                </div>
-              ))}
-            </div>
+                )}
+              </div>
+            )}
           </div>
           
           {/* 부위별 스트레칭 */}
@@ -860,49 +1130,55 @@ const MainPage = () => {
               </Link>
             </div>
             
-            <div className="space-y-3">
-              {recentStretchings.length > 0 ? (
-                recentStretchings.map((item) => (
-                  <div 
-                    key={item.id} 
-                    className="bg-white rounded-xl p-4 shadow-sm flex justify-between items-center border border-gray-100 hover:border-[#93D400] transition-all duration-300 hover:shadow-md hover:translate-y-[-2px]"
-                  >
-                    <div>
-                      <h3 className="font-medium">{item.title}</h3>
-                      <div className="flex items-center text-xs text-gray-500 mt-1">
-                        <Clock className="w-3 h-3 mr-1" />
-                        {item.time}
-                        <span className="mx-1">•</span>
-                        {item.duration}
+            {loadingRecent ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6B925C]"></div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentStretchings.length > 0 ? (
+                  recentStretchings.map((item) => (
+                    <div 
+                      key={item.id} 
+                      className="bg-white rounded-xl p-4 shadow-sm flex justify-between items-center border border-gray-100 hover:border-[#93D400] transition-all duration-300 hover:shadow-md hover:translate-y-[-2px]"
+                    >
+                      <div>
+                        <h3 className="font-medium">{item.title}</h3>
+                        <div className="flex items-center text-xs text-gray-500 mt-1">
+                          <Clock className="w-3 h-3 mr-1" />
+                          {item.time}
+                          <span className="mx-1">•</span>
+                          {item.duration}
+                        </div>
                       </div>
+                      <button className="text-[#6B925C] hover:scale-110 transition-transform p-2 rounded-full hover:bg-[#F9FFEB]">
+                        <PlayCircle className="w-6 h-6" />
+                      </button>
                     </div>
-                    <button className="text-[#6B925C] hover:scale-110 transition-transform p-2 rounded-full hover:bg-[#F9FFEB]">
-                      <PlayCircle className="w-6 h-6" />
+                  ))
+                ) : (
+                  <div className="bg-white rounded-xl p-6 shadow-sm text-center border border-gray-100">
+                    <div className="w-16 h-16 mx-auto mb-3 opacity-50">
+                      <Image
+                        src="/assets/bugi.png"
+                        alt="부기 캐릭터"
+                        width={64}
+                        height={64}
+                        className="object-contain"
+                      />
+                    </div>
+                    <p className="text-gray-500 mb-3">아직 활동 기록이 없습니다.</p>
+                    <button 
+                      onClick={createSession}
+                      className="bg-[#6B925C] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#5A7F4B] transition-colors flex items-center mx-auto"
+                    >
+                      <span>첫 스트레칭 시작하기</span>
+                      <ArrowRight className="w-4 h-4 ml-1.5" />
                     </button>
                   </div>
-                ))
-              ) : (
-                <div className="bg-white rounded-xl p-6 shadow-sm text-center border border-gray-100">
-                  <div className="w-16 h-16 mx-auto mb-3 opacity-50">
-                    <Image
-                      src="/assets/bugi.png"
-                      alt="부기 캐릭터"
-                      width={64}
-                      height={64}
-                      className="object-contain"
-                    />
-                  </div>
-                  <p className="text-gray-500 mb-3">아직 활동 기록이 없습니다.</p>
-                  <button 
-                    onClick={createSession}
-                    className="bg-[#6B925C] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#5A7F4B] transition-colors flex items-center mx-auto"
-                  >
-                    <span>첫 스트레칭 시작하기</span>
-                    <ArrowRight className="w-4 h-4 ml-1.5" />
-                  </button>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
         

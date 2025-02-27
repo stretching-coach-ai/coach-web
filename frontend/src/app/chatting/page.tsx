@@ -72,7 +72,7 @@ export default function ChatUI() {
     };
 
     try {
-      const url = `http://localhost:8000/api/v1/4${session_id}/stretching`;
+      const url = `http://localhost:8000/api/v1/${session_id}/stretching`;
       console.log('API 요청 URL:', url);
 
       const response = await axios.post(url, payload, {

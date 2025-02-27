@@ -1,16 +1,18 @@
-from fastapi import APIRouter, HTTPException, Query, Depends, status
+from fastapi import APIRouter, HTTPException, Query, Depends, status, Response, Cookie
 from typing import Optional, List
 from app.schemas.user import UserResponse, UserProfileUpdate, UserDelete
 from app.schemas.session import StretchingSession
 from app.services.user_service import UserService
 from app.services.health_profile_service import HealthProfileService
 from app.services.body_condition_service import BodyConditionService
+from app.services.auth_service import AuthService
 from app.api.v1.dependencies import get_current_user, get_current_user_or_403
 
 router = APIRouter()
 user_service = UserService()
 health_profile_service = HealthProfileService()
 body_condition_service = BodyConditionService()
+auth_service = AuthService()
 
 @router.get("/users/{user_id}", response_model=UserResponse)
 async def get_user(user_id: str):
@@ -43,7 +45,9 @@ async def update_user_profile(
 async def delete_user(
     user_id: str,
     delete_data: UserDelete,
-    current_user: UserResponse = Depends(get_current_user_or_403)
+    response: Response,
+    current_user: UserResponse = Depends(get_current_user_or_403),
+    session_cookie: Optional[str] = Cookie(None, alias="session_id")
 ):
     """회원 탈퇴 API"""
     # 본인 계정만 삭제 가능
@@ -69,6 +73,11 @@ async def delete_user(
     # 관련 데이터 삭제
     await health_profile_service.delete_health_profile_by_user(user_id)
     await body_condition_service.delete_body_conditions_by_user(user_id)
+    
+    # 세션 삭제
+    if session_cookie:
+        await auth_service.logout(session_cookie)
+        response.delete_cookie("session_id")
     
     # 사용자 계정 삭제
     deleted = await user_service.delete_user(user_id)

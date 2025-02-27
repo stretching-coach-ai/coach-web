@@ -12,6 +12,7 @@ from app.schemas.session import StretchingSession
 from app.schemas.user import UserResponse
 from app.services.embedding_service import EmbeddingService
 from app.api.v1.dependencies import get_current_user
+from app.core.database import MongoManager
 import json
 import re
 from typing import Optional
@@ -612,78 +613,250 @@ async def get_muscle_exercises(muscle_name: str):
 async def get_popular_stretches(
     request: Request,
     limit: int = 3,
-    db = Depends(get_db)
+    db = Depends(MongoManager.get_db)
 ):
     """
-    오늘 사용된 AI 응답 중 사용 빈도가 높은 스트레칭 자료를 반환합니다.
+    최근 생성된 스트레칭 세션 중 인기 있는 스트레칭 자료를 반환합니다.
     """
     try:
-        # 오늘 날짜 기준으로 필터링
-        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        # 날짜 필터링 없이 모든 데이터에서 인기 있는 스트레칭을 가져옵니다
         
-        # AI 응답 데이터 중 오늘 생성된 데이터를 가져옵니다
+        # temp_sessions 컬렉션에서 스트레칭 세션 데이터를 가져옵니다
         pipeline = [
-            {"$match": {"created_at": {"$gte": today}}},
+            {"$match": {"stretching_history.0": {"$exists": True}}},  # stretching_history 배열이 비어있지 않은 문서
+            {"$unwind": "$stretching_history"},
+            {"$match": {"stretching_history.ai_response": {"$ne": None, "$ne": ""}}},
             {"$group": {
-                "_id": "$ai_response",
+                "_id": "$stretching_history.target_body_part",
                 "count": {"$sum": 1},
-                "created_at": {"$first": "$created_at"}
+                "created_at": {"$first": "$stretching_history.created_at"},
+                "user_input": {"$first": "$stretching_history.user_input"},
+                "ai_response": {"$first": "$stretching_history.ai_response"}
             }},
             {"$sort": {"count": -1}},
             {"$limit": limit}
         ]
         
-        popular_stretches = await db["ai_requests"].aggregate(pipeline).to_list(length=limit)
+        logger.info("Fetching popular stretches from temp_sessions collection")
+        popular_stretches = await db["temp_sessions"].aggregate(pipeline).to_list(length=limit)
+        
+        # temp_sessions에 데이터가 없으면 ai_requests에서 가져옵니다
+        if not popular_stretches:
+            logger.info("No stretching sessions found in temp_sessions, falling back to ai_requests")
+            pipeline = [
+                {"$group": {
+                    "_id": {"$ifNull": ["$target_body_part", "전신"]},
+                    "count": {"$sum": 1},
+                    "created_at": {"$first": "$created_at"},
+                    "user_input": {"$first": "$user_input"},
+                    "ai_response": {"$first": "$ai_response"}
+                }},
+                {"$sort": {"count": -1}},
+                {"$limit": limit}
+            ]
+            popular_stretches = await db["ai_requests"].aggregate(pipeline).to_list(length=limit)
         
         # 결과 포맷팅
         result = []
+        
+        # 상세 스트레칭 정보 (실제로는 DB에서 가져오거나 AI가 생성해야 함)
+        detailed_stretching_info = {
+            "목": {
+                "title": "흉쇄유돌근 유연성 증가 스트레칭",
+                "condition": "거북목",
+                "level": "초급",
+                "short_description": "흉쇄유돌근의 유연성 증가, 통증 감소에 효과적인 스트레칭입니다.",
+                "steps": [
+                    "1단계: 아기의 머리를 부드럽게 잡고, 천천히 오른쪽으로 회전시킨다.",
+                    "2단계: 머리를 오른쪽으로 회전한 상태에서 5초간 유지한다.",
+                    "3단계: 머리를 중립 위치로 되돌린다.",
+                    "4단계: 아기의 머리를 부드럽게 잡고, 천천히 왼쪽으로 회전시킨다.",
+                    "5단계: 머리를 왼쪽으로 회전한 상태에서 5초간 유지한 후, 중립 위치로 되돌린다."
+                ],
+                "effects": ["유연성 증가", "통증 감소", "머리 회전 각도 개선"],
+                "guide": {
+                    "duration": "5초 유지",
+                    "repetition": "각 방향으로 5회 반복",
+                    "frequency": "주 3회"
+                },
+                "cautions": [
+                    "아기의 반응을 주의 깊게 관찰",
+                    "과도한 힘을 주지 않도록 주의"
+                ],
+                "contraindications": [
+                    "심한 목 통증",
+                    "목 부상 이력"
+                ],
+                "tags": ["거북목", "목 통증", "두통"],
+                "related_docs": ["참고 자료"]
+            },
+            "어깨": {
+                "title": "회전근개 강화 스트레칭",
+                "condition": "어깨 통증",
+                "level": "중급",
+                "short_description": "회전근개 근육을 강화하고 어깨 통증을 완화하는 스트레칭입니다.",
+                "steps": [
+                    "1단계: 팔을 몸 옆에 자연스럽게 내리고 선다.",
+                    "2단계: 팔꿈치를 90도로 구부린다.",
+                    "3단계: 팔꿈치를 몸에 붙인 상태에서 천천히 팔을 바깥쪽으로 회전시킨다.",
+                    "4단계: 최대한 회전된 상태에서 5초간 유지한다.",
+                    "5단계: 천천히 시작 자세로 돌아온다."
+                ],
+                "effects": ["회전근개 강화", "어깨 안정성 향상", "통증 감소"],
+                "guide": {
+                    "duration": "5초 유지",
+                    "repetition": "10회 반복",
+                    "frequency": "주 3-4회"
+                },
+                "cautions": [
+                    "통증이 심해지면 즉시 중단",
+                    "과도한 회전은 피하기"
+                ],
+                "contraindications": [
+                    "급성 어깨 부상",
+                    "회전근개 파열"
+                ],
+                "tags": ["어깨 통증", "회전근개", "오십견"],
+                "related_docs": ["어깨 관리 가이드"]
+            },
+            "허리": {
+                "title": "요추 안정화 스트레칭",
+                "condition": "요통",
+                "level": "초급",
+                "short_description": "요추 부위의 안정성을 높이고 만성 요통을 완화하는 스트레칭입니다.",
+                "steps": [
+                    "1단계: 바닥에 등을 대고 눕는다.",
+                    "2단계: 무릎을 구부리고 발은 바닥에 평평하게 둔다.",
+                    "3단계: 복부 근육을 수축시켜 허리와 바닥 사이의 공간을 최소화한다.",
+                    "4단계: 이 자세를 10초간 유지한다.",
+                    "5단계: 천천히 근육을 이완시킨다."
+                ],
+                "effects": ["요추 안정성 향상", "요통 감소", "자세 개선"],
+                "guide": {
+                    "duration": "10초 유지",
+                    "repetition": "8회 반복",
+                    "frequency": "매일"
+                },
+                "cautions": [
+                    "갑작스러운 움직임 피하기",
+                    "호흡을 멈추지 않기"
+                ],
+                "contraindications": [
+                    "급성 디스크 탈출증",
+                    "척추 수술 직후"
+                ],
+                "tags": ["요통", "허리 디스크", "좌식 생활"],
+                "related_docs": ["허리 건강 관리법"]
+            }
+        }
+        
+        logger.info(f"Found {len(popular_stretches)} popular stretches")
         for idx, item in enumerate(popular_stretches):
-            # AI 응답에서 제목과 설명 추출
-            ai_response = item["_id"]
+            # 타겟 부위 추출
+            target = "전신"
+            user_input = item.get("user_input", {})
             
-            # 간단한 파싱 로직 (실제로는 더 정교한 파싱이 필요할 수 있음)
-            lines = ai_response.split('\n')
-            title = "추천 스트레칭"
-            description = ""
+            # _id 필드가 타겟 부위인 경우 (수정된 파이프라인)
+            if "_id" in item and item["_id"]:
+                target = item["_id"]
+                logger.info(f"Target body part from _id: {target}")
+            # user_input이 문자열인 경우 (ai_requests 컬렉션)
+            elif isinstance(user_input, str):
+                # 간단한 파싱 시도
+                if "목" in user_input or "neck" in user_input.lower():
+                    target = "목"
+                elif "어깨" in user_input or "shoulder" in user_input.lower():
+                    target = "어깨"
+                elif "허리" in user_input or "back" in user_input.lower():
+                    target = "허리"
+                elif "다리" in user_input or "leg" in user_input.lower():
+                    target = "다리"
+                logger.info(f"Target body part from user_input string: {target}")
+            # user_input이 딕셔너리인 경우 (temp_sessions 컬렉션)
+            elif isinstance(user_input, dict) and "selected_body_parts" in user_input:
+                target = user_input["selected_body_parts"]
+                logger.info(f"Target body part from user_input dict: {target}")
             
-            for i, line in enumerate(lines):
-                if "추천 스트레칭:" in line or "스트레칭:" in line:
-                    if i+1 < len(lines) and lines[i+1].strip():
-                        title = lines[i+1].strip()
-                        if title.startswith('-') or title.startswith('1.'):
-                            title = title[title.find(' ')+1:]
-                    break
+            # 상세 정보 가져오기
+            detail = detailed_stretching_info.get(target, {})
+            if not detail and "," in target:
+                # 여러 부위가 쉼표로 구분된 경우 첫 번째 부위 사용
+                first_target = target.split(",")[0].strip()
+                detail = detailed_stretching_info.get(first_target, {})
+                logger.info(f"Using first target from comma-separated list: {first_target}")
             
-            # 설명 추출
-            for i, line in enumerate(lines):
-                if i > 0 and (line.startswith('-') or line.startswith('•') or ('.' in line and line[0].isdigit())):
-                    description = line.strip()
-                    if description.startswith('-') or description.startswith('•'):
-                        description = description[1:].strip()
-                    elif '.' in description and description[0].isdigit():
-                        description = description[description.find('.')+1:].strip()
-                    break
-            
-            result.append({
+            # 기본 정보 설정
+            stretch_info = {
                 "id": str(idx + 1),
-                "title": title,
-                "description": description or "맞춤형 스트레칭 루틴",
+                "title": detail.get("title", f"{target} 스트레칭"),
+                "condition": detail.get("condition", ""),
+                "level": detail.get("level", "초급"),
+                "short_description": detail.get("short_description", f"{target} 부위의 통증 완화를 위한 스트레칭입니다."),
+                "steps": detail.get("steps", [f"{target} 부위를 부드럽게 스트레칭합니다."]),
+                "effects": detail.get("effects", ["통증 완화", "유연성 증가"]),
+                "guide": detail.get("guide", {"duration": "5-10초 유지", "repetition": "5회 반복", "frequency": "주 3회"}),
+                "cautions": detail.get("cautions", ["무리하게 스트레칭하지 않기", "통증이 심해지면 중단하기"]),
+                "contraindications": detail.get("contraindications", ["급성 부상", "심한 통증"]),
+                "tags": detail.get("tags", [f"{target} 통증"]),
+                "related_docs": detail.get("related_docs", []),
                 "count": item["count"],
                 "color": "from-green-400 to-green-600" if idx == 0 else 
                          "from-blue-400 to-blue-600" if idx == 1 else 
                          "from-purple-400 to-purple-600",
-                "duration": "5-10분",
-                "target": "전신",
-                "created_at": item["created_at"]
-            })
+                "target": target,
+                "created_at": item.get("created_at", datetime.now())
+            }
+            
+            # AI 응답에서 제목 추출 시도
+            ai_response = item.get("ai_response", "")
+            if ai_response:
+                logger.info(f"Extracting title from AI response (length: {len(ai_response)})")
+                lines = ai_response.split('\n')
+                for i, line in enumerate(lines):
+                    if "추천 스트레칭:" in line or "스트레칭:" in line or "제목:" in line:
+                        if i+1 < len(lines) and lines[i+1].strip():
+                            title = lines[i+1].strip()
+                            if title.startswith('-') or title.startswith('1.'):
+                                title = title[title.find(' ')+1:]
+                            stretch_info["title"] = title
+                            logger.info(f"Extracted title: {title}")
+                            break
+            
+            result.append(stretch_info)
+        
+        # 결과가 없으면 기본 데이터 반환
+        if not result:
+            logger.warning("No popular stretches found, returning default data")
+            for idx, (target, detail) in enumerate(detailed_stretching_info.items()):
+                if idx >= limit:
+                    break
+                    
+                result.append({
+                    "id": str(idx + 1),
+                    "title": detail.get("title", f"{target} 스트레칭"),
+                    "condition": detail.get("condition", ""),
+                    "level": detail.get("level", "초급"),
+                    "short_description": detail.get("short_description", f"{target} 부위의 통증 완화를 위한 스트레칭입니다."),
+                    "steps": detail.get("steps", [f"{target} 부위를 부드럽게 스트레칭합니다."]),
+                    "effects": detail.get("effects", ["통증 완화", "유연성 증가"]),
+                    "guide": detail.get("guide", {"duration": "5-10초 유지", "repetition": "5회 반복", "frequency": "주 3회"}),
+                    "cautions": detail.get("cautions", ["무리하게 스트레칭하지 않기", "통증이 심해지면 중단하기"]),
+                    "contraindications": detail.get("contraindications", ["급성 부상", "심한 통증"]),
+                    "tags": detail.get("tags", [f"{target} 통증"]),
+                    "related_docs": detail.get("related_docs", []),
+                    "count": 0,
+                    "color": "from-green-400 to-green-600" if idx == 0 else 
+                             "from-blue-400 to-blue-600" if idx == 1 else 
+                             "from-purple-400 to-purple-600",
+                    "target": target,
+                    "created_at": datetime.now()
+                })
         
         return result
     except Exception as e:
-        print(f"Error getting popular stretches: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error getting popular stretches: {str(e)}"
-        )
+        logger.error(f"Error in get_popular_stretches: {str(e)}", exc_info=True)
+        # 오류 발생 시 빈 배열 반환
+        return []
 
 @router.get("/recent-activities", response_model=list)
 async def get_recent_activities(
@@ -691,7 +864,7 @@ async def get_recent_activities(
     limit: int = 5,
     user_id: Optional[str] = None,
     session_id: Optional[str] = None,
-    db = Depends(get_db)
+    db = Depends(MongoManager.get_db)
 ):
     """
     사용자의 최근 활동을 반환합니다.
@@ -729,7 +902,22 @@ async def get_recent_activities(
             
             # 사용자 입력에서 선택한 부위 추출
             user_input = activity.get("user_input", {})
-            selected_body_parts = user_input.get("selected_body_parts", "전신")
+            selected_body_parts = "전신"
+            
+            # user_input이 문자열인 경우
+            if isinstance(user_input, str):
+                # 간단한 파싱 시도
+                if "목" in user_input or "neck" in user_input.lower():
+                    selected_body_parts = "목"
+                elif "어깨" in user_input or "shoulder" in user_input.lower():
+                    selected_body_parts = "어깨"
+                elif "허리" in user_input or "back" in user_input.lower():
+                    selected_body_parts = "허리"
+                elif "다리" in user_input or "leg" in user_input.lower():
+                    selected_body_parts = "다리"
+            # user_input이 딕셔너리인 경우
+            elif isinstance(user_input, dict) and "selected_body_parts" in user_input:
+                selected_body_parts = user_input["selected_body_parts"]
             
             # AI 응답에서 제목 추출
             ai_response = activity.get("ai_response", "")
