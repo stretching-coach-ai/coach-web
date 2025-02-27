@@ -17,7 +17,7 @@ brew install mongodb-community
 brew services start mongodb-community
 
 # Windows
-# MongoDB는 설치 시 자동으로 서비스로 등록되어 실행됩니다
+# MongoDB는 설치 시 자동으로 서비스로 등록되어 실행됩니다 ( 확인필요 ) 
 ```
 
 ## 프로젝트 구조
