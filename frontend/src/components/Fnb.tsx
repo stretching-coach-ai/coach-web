@@ -24,12 +24,12 @@ export const Fnb = () => {
             <p className="mt-[2px]">메인</p>
           </Link>
           <Link
-            href="/chating"
+            href="/chatting"
             className="flex flex-col text-[10px] font-medium text-[#6B925C] justify-center items-center"
             style={{ width: 'calc(100vw / 8.7)' }}
           >
             <AiChat02Icon
-              className={`w-8 h-8 ${pathname === '/chating' ? 'text-[#6B925C]' : 'text-black'}`}
+              className={`w-8 h-8 ${pathname === '/chatting' ? 'text-[#6B925C]' : 'text-black'}`}
             />
             <p className="mt-[2px]">채팅</p>
           </Link>
