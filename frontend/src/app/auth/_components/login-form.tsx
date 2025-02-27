@@ -50,7 +50,7 @@ export const LoginForm = () => {
     setError('');
     setSuccess(false);
     try {
-      const response = await fetch('login', {
+      const response = await fetch('http://localhost:8000/api/v1/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,12 +60,20 @@ export const LoginForm = () => {
       });
 
       if (!response.ok) {
-        throw new Error('로그인 실패! 아이디 또는 비밀번호를 확인해라부기');
+        const errorData = await response.json(); // 서버에서 응답한 에러 메시지 가져오기
+        throw new Error(
+          errorData.details ||
+            '로그인 실패! 아이디 또는 비밀번호를 확인해라부기',
+        );
       }
       setSuccess(true);
       router.replace('/onboarding');
     } catch (error) {
-      setError(error.message);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('알 수 없는 에러 발생');
+      }
     } finally {
       setIsPending(false);
     }
@@ -130,9 +138,13 @@ export const LoginForm = () => {
               {isPending ? '로그인 중...' : '로그인'}
             </Button>
           </div>
-          {error && <p className="text-red-500 mt-2">{error}</p>}
+          {error && (
+            <p className="block w-[339px] m-auto text-red-500 mt-2">{error}</p>
+          )}
           {success && (
-            <p className="text-[#9EBC5A] mt-2">로그인 성공이다부기!</p>
+            <p className="block w-[339px] m-auto text-[#9EBC5A] mt-2">
+              로그인 성공이다부기!
+            </p>
           )}
         </form>
       </Form>
