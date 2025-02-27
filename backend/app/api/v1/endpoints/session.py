@@ -188,6 +188,7 @@ async def create_stretching_session_stream(
         # SSE 형식으로 변환하는 내부 함수 정의
         async def format_as_sse():
             try:
+                logger.info("Starting SSE stream for stretching guide")
                 async for chunk in HelpyProService.generate_stretching_guide_stream(
                     session_id=session_id,
                     stretching_id=stretching_id,
@@ -199,16 +200,27 @@ async def create_stretching_session_stream(
                 ):
                     # StreamingAIResponse를 SSE 형식으로 변환
                     data = json.dumps({"content": chunk.content, "done": chunk.done})
-                    yield f"data: {data}\n\n"
-                    logger.debug(f"Sent SSE chunk: {data[:50]}...")
+                    sse_message = f"data: {data}\n\n"
+                    logger.debug(f"Sending SSE chunk: content_length={len(chunk.content)}, done={chunk.done}")
+                    logger.debug(f"SSE message format: {sse_message[:50]}...")
+                    yield sse_message
+                
+                logger.info("SSE stream completed successfully")
             except Exception as e:
                 logger.error(f"Error in SSE stream: {str(e)}", exc_info=True)
                 error_data = json.dumps({"content": "오류가 발생했습니다. 다시 시도해주세요.", "done": True})
                 yield f"data: {error_data}\n\n"
         
+        # 스트리밍 응답 반환
+        logger.info("Returning StreamingResponse with SSE media type")
         return StreamingResponse(
             format_as_sse(),
-            media_type="text/event-stream"
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"  # Nginx 버퍼링 비활성화
+            }
         )
         
     except Exception as e:

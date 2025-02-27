@@ -661,10 +661,12 @@ JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를
                                         line = line[6:]  # "data: " 제거
                                         
                                     if line == "[DONE]":
+                                        logger.debug("스트리밍 완료 신호 [DONE] 수신")
                                         break
                                         
                                     try:
                                         # JSON 파싱
+                                        logger.debug(f"파싱 시도: {line[:100]}...")
                                         data = json.loads(line)
                                         
                                         # 콘텐츠 추출
@@ -672,11 +674,13 @@ JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를
                                         content = delta.get("content", "")
                                         
                                         if content:
+                                            logger.debug(f"스트리밍 콘텐츠 추가 (길이: {len(content)}): {content[:50]}...")
                                             full_response += content
                                             yield StreamingAIResponse(
                                                 content=content,
                                                 done=False
                                             )
+                                            logger.debug("StreamingAIResponse 객체 전송 완료")
                                     except json.JSONDecodeError:
                                         logger.warning(f"Failed to parse JSON: {line}")
                                         continue
@@ -691,6 +695,8 @@ JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를
                         # 스트리밍 완료 후 전체 응답 저장
                         if full_response:
                             logger.info(f"Streaming completed for session: {session_id}")
+                            logger.debug(f"Full response length: {len(full_response)}")
+                            logger.debug(f"Full response preview: {full_response[:200]}...")
                             
                             # 임시 세션에 AI 응답 저장
                             if temp_session_service:
@@ -720,10 +726,12 @@ JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를
                                 )
                             
                             # 완료 신호 전송
+                            logger.debug("Sending final done signal")
                             yield StreamingAIResponse(
                                 content="",
                                 done=True
                             )
+                            logger.debug("Stream completed successfully")
                         else:
                             logger.warning(f"Empty response for session: {session_id}")
                             yield StreamingAIResponse(
