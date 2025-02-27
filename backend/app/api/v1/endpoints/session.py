@@ -1,6 +1,6 @@
 from uuid import uuid4
 import logging
-from fastapi import APIRouter, Response, HTTPException, Cookie, Depends
+from fastapi import APIRouter, Response, HTTPException, Cookie, Depends, Request, status
 from fastapi.responses import StreamingResponse
 from app.services.temp_session_service import TempSessionService
 from app.services.helpy_pro_service import HelpyProService
@@ -15,6 +15,8 @@ from app.api.v1.dependencies import get_current_user
 import json
 import re
 from typing import Optional
+from datetime import datetime
+from app.models.ai_request import AIRequestDB
 
 logger = logging.getLogger(__name__)
 
@@ -605,3 +607,80 @@ async def get_muscle_exercises(muscle_name: str):
     except Exception as e:
         logger.error(f"Error in get_muscle_exercises: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/popular-stretches", response_model=list)
+async def get_popular_stretches(
+    request: Request,
+    limit: int = 3,
+    db = Depends(get_db)
+):
+    """
+    오늘 사용된 AI 응답 중 사용 빈도가 높은 스트레칭 자료를 반환합니다.
+    """
+    try:
+        # 오늘 날짜 기준으로 필터링
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # AI 응답 데이터 중 오늘 생성된 데이터를 가져옵니다
+        pipeline = [
+            {"$match": {"created_at": {"$gte": today}}},
+            {"$group": {
+                "_id": "$ai_response",
+                "count": {"$sum": 1},
+                "created_at": {"$first": "$created_at"}
+            }},
+            {"$sort": {"count": -1}},
+            {"$limit": limit}
+        ]
+        
+        popular_stretches = await db["ai_requests"].aggregate(pipeline).to_list(length=limit)
+        
+        # 결과 포맷팅
+        result = []
+        for idx, item in enumerate(popular_stretches):
+            # AI 응답에서 제목과 설명 추출
+            ai_response = item["_id"]
+            
+            # 간단한 파싱 로직 (실제로는 더 정교한 파싱이 필요할 수 있음)
+            lines = ai_response.split('\n')
+            title = "추천 스트레칭"
+            description = ""
+            
+            for i, line in enumerate(lines):
+                if "추천 스트레칭:" in line or "스트레칭:" in line:
+                    if i+1 < len(lines) and lines[i+1].strip():
+                        title = lines[i+1].strip()
+                        if title.startswith('-') or title.startswith('1.'):
+                            title = title[title.find(' ')+1:]
+                    break
+            
+            # 설명 추출
+            for i, line in enumerate(lines):
+                if i > 0 and (line.startswith('-') or line.startswith('•') or ('.' in line and line[0].isdigit())):
+                    description = line.strip()
+                    if description.startswith('-') or description.startswith('•'):
+                        description = description[1:].strip()
+                    elif '.' in description and description[0].isdigit():
+                        description = description[description.find('.')+1:].strip()
+                    break
+            
+            result.append({
+                "id": str(idx + 1),
+                "title": title,
+                "description": description or "맞춤형 스트레칭 루틴",
+                "count": item["count"],
+                "color": "from-green-400 to-green-600" if idx == 0 else 
+                         "from-blue-400 to-blue-600" if idx == 1 else 
+                         "from-purple-400 to-purple-600",
+                "duration": "5-10분",
+                "target": "전신",
+                "created_at": item["created_at"]
+            })
+        
+        return result
+    except Exception as e:
+        print(f"Error getting popular stretches: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting popular stretches: {str(e)}"
+        )
