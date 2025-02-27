@@ -22,3 +22,11 @@ Thumbs.db
 *.log
 logs/
 log/
+
+# API Documentation
+openapi.json
+swagger.html
+
+# Cookies and session files
+*cookies.txt
+*_cookies.txt
