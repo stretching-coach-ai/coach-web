@@ -44,7 +44,6 @@ export const LoginForm = () => {
   });
 
   const onSubmit = async (values: z.infer<typeof LoginSchema>) => {
-    console.log(values);
     const { email, password } = values;
     setIsPending(true);
     setError('');
@@ -61,9 +60,11 @@ export const LoginForm = () => {
 
       if (!response.ok) {
         const errorData = await response.json(); // 서버에서 응답한 에러 메시지 가져오기
+        console.log(errorData);
         throw new Error(
-          errorData.details ||
-            '로그인 실패! 아이디 또는 비밀번호를 확인해라부기',
+          errorData.detail === 'Invalid credentials'
+            ? '해당 이메일로 가입된 계정이 없다부기'
+            : '로그인 실패! 아이디 또는 비밀번호를 확인해라부기',
         );
       }
       setSuccess(true);
