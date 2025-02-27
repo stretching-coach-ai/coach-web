@@ -20,6 +20,9 @@ import { Stardust } from '@/app/fonts';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+// API URL 환경 변수 제거
+// const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+
 const LoginSchema = z.object({
   email: z.string().email({
     message: '유효하지 않은 이메일 형식이다부기.',
@@ -49,7 +52,7 @@ export const LoginForm = () => {
     setError('');
     setSuccess(false);
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/login', {
+      const response = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
