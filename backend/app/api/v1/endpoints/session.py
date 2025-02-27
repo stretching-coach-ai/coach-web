@@ -14,6 +14,7 @@ from app.services.embedding_service import EmbeddingService
 from app.api.v1.dependencies import get_current_user
 import json
 import re
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,18 @@ async def create_session(response: Response):
         samesite="lax"
     )
     return {"session_id": session.session_id}
+
+@router.get("/sessions/current")
+async def get_current_session(session_cookie: Optional[str] = Cookie(None, alias="session_id")):
+    """현재 세션 정보 조회"""
+    if not session_cookie:
+        raise HTTPException(status_code=401, detail="활성화된 세션이 없습니다")
+    
+    logger.info(f"세션 쿠키 값: {session_cookie}")
+    session = await TempSessionService.get_session(session_cookie)
+    if not session:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    return session
 
 @router.get("/sessions/{session_id}")
 async def get_session(session_id: str):
