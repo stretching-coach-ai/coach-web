@@ -86,14 +86,6 @@ async def get_current_session(session_cookie: Optional[str] = Cookie(None, alias
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
     return session
 
-@router.get("/sessions/{session_id}")
-async def get_session(session_id: str):
-    """세션 정보 조회"""
-    session = await TempSessionService.get_session(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-    return session
-
 @router.post("/sessions/{session_id}/stretching", response_model=AIResponse)
 async def create_stretching_session(
     session_id: str,
