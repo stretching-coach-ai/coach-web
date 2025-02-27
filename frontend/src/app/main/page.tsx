@@ -56,28 +56,81 @@ const MainPage = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        setLoading(true);
         const response = await fetch('/api/v1/auth/me', {
-          credentials: 'include'
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
         });
         
         if (response.ok) {
           const data = await response.json();
+          console.log('사용자 정보 응답:', data);
           if (data.is_authenticated && data.user) {
             setUser(data.user);
+            // 세션 ID가 없으면 세션 ID도 설정
+            if (!sessionId && data.session_id) {
+              setSessionId(data.session_id);
+            }
+            // 로컬 스토리지에 사용자 정보 저장 (새로고침 대비)
+            localStorage.setItem('user', JSON.stringify(data.user));
+          } else {
+            // 로컬 스토리지에서 사용자 정보 확인
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+              setUser(JSON.parse(storedUser));
+            }
+          }
+        } else {
+          console.error('사용자 정보를 가져오는데 실패했습니다:', response.status);
+          // 로컬 스토리지에서 사용자 정보 확인
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            setUser(JSON.parse(storedUser));
           }
         }
       } catch (error) {
         console.error('사용자 정보를 가져오는 중 오류 발생:', error);
+        // 로컬 스토리지에서 사용자 정보 확인
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      } finally {
+        setLoading(false);
       }
     };
     
+    // 페이지 로드 시 사용자 정보 확인
     checkAuth();
-  }, []);
+    
+    // 페이지 포커스 시 사용자 정보 다시 확인 (다른 탭에서 로그인/로그아웃 대응)
+    const handleFocus = () => {
+      checkAuth();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [sessionId]);
   
   // 세션 생성 함수
   const createSession = async () => {
     try {
       setLoading(true);
+      
+      // 이미 로그인된 사용자인 경우 바로 onboarding으로 이동
+      if (user) {
+        console.log('로그인된 사용자입니다. onboarding 페이지로 이동합니다.');
+        window.location.href = '/onboarding';
+        return;
+      }
+      
+      // 비로그인 사용자는 세션 생성 후 select 페이지로 이동
       const response = await fetch('/api/v1/sessions', {
         method: 'POST',
         credentials: 'include',
@@ -349,9 +402,22 @@ const MainPage = () => {
               <button 
                 onClick={createSession}
                 className="bg-white text-[#6B925C] px-5 py-2.5 rounded-lg font-medium shadow-sm hover:bg-gray-50 transition-colors flex items-center"
+                disabled={loading}
               >
-                <span>시작하기</span>
-                <ArrowRight className="w-4 h-4 ml-1.5" />
+                {loading ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-[#6B925C]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    처리 중...
+                  </span>
+                ) : (
+                  <>
+                    <span>{user ? '스트레칭 시작' : '시작하기'}</span>
+                    <ArrowRight className="w-4 h-4 ml-1.5" />
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -369,7 +435,7 @@ const MainPage = () => {
               {recommendedStretchings.slice(0, 3).map((item) => (
                 <div 
                   key={item.id}
-                  className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-shadow"
+                  className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-300 hover:border-[#93D400] transform hover:translate-y-[-2px]"
                 >
                   <div className={`h-16 bg-gradient-to-r ${item.color} flex items-center p-4`}>
                     <div className="text-white">
@@ -384,8 +450,9 @@ const MainPage = () => {
                   </div>
                   <div className="p-3">
                     <p className="text-sm text-gray-600 line-clamp-2">{item.description}</p>
-                    <button className="mt-2 text-sm font-medium text-[#6B925C] flex items-center">
-                      자세히 보기 <ArrowRight className="w-3 h-3 ml-1" />
+                    <button className="mt-2 text-sm font-medium text-[#6B925C] flex items-center group">
+                      자세히 보기 
+                      <ArrowRight className="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" />
                     </button>
                   </div>
                 </div>
@@ -406,11 +473,23 @@ const MainPage = () => {
               {bodyParts.map((part) => (
                 <div 
                   key={part.id}
-                  className={`${part.color} rounded-xl p-3 text-center cursor-pointer transition-all duration-300 hover:shadow-md hover:scale-105 ${selectedBodyPart === part.id ? 'ring-2 ring-[#6B925C] shadow-md' : ''}`}
+                  className={`${part.color} rounded-xl p-3 text-center cursor-pointer transition-all duration-300 hover:shadow-md hover:scale-105 
+                    ${selectedBodyPart === part.id ? 'ring-2 ring-[#6B925C] shadow-md' : ''}`}
                   onClick={() => handleBodyPartClick(part.id)}
                 >
-                  <p className="font-medium">{part.name}</p>
-                  <p className="text-xs mt-1">{part.count}개 운동</p>
+                  <div className="flex flex-col items-center">
+                    <div className="w-10 h-10 rounded-full bg-white/50 flex items-center justify-center mb-2">
+                      {/* 각 부위별 아이콘 추가 */}
+                      {part.id === 'neck' && <span className="text-lg">👤</span>}
+                      {part.id === 'shoulder' && <span className="text-lg">💪</span>}
+                      {part.id === 'back' && <span className="text-lg">🔙</span>}
+                      {part.id === 'arm' && <span className="text-lg">💪</span>}
+                      {part.id === 'leg' && <span className="text-lg">🦵</span>}
+                      {part.id === 'full' && <span className="text-lg">👤</span>}
+                    </div>
+                    <p className="font-medium">{part.name}</p>
+                    <p className="text-xs mt-1">{part.count}개 운동</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -433,7 +512,12 @@ const MainPage = () => {
                   <div className="space-y-4">
                     {bodyPartExercises.map((muscleData, muscleIndex) => (
                       <div key={muscleIndex} className="border rounded-lg p-3 hover:border-[#93D400] transition-colors">
-                        <h4 className="font-medium text-[#6B925C]">{muscleData.muscle} ({muscleData.english})</h4>
+                        <h4 className="font-medium text-[#6B925C] flex items-center">
+                          <span className="w-5 h-5 bg-[#E5FFA9] rounded-full flex items-center justify-center mr-2 text-xs text-[#6B925C]">
+                            {muscleIndex + 1}
+                          </span>
+                          {muscleData.muscle} ({muscleData.english})
+                        </h4>
                         <div className="mt-2 space-y-3">
                           {muscleData.exercises.map((exercise, exerciseIndex) => (
                             <div key={exerciseIndex} className="bg-gray-50 rounded-lg p-3 hover:bg-[#F9FFEB] transition-colors">
@@ -452,7 +536,7 @@ const MainPage = () => {
                                     <h6 className="font-medium text-[#6B925C] mb-1">수행 방법</h6>
                                     <ol className="list-decimal list-inside space-y-1">
                                       {exercise.protocol.steps.map((step, stepIndex) => (
-                                        <li key={stepIndex}>{step}</li>
+                                        <li key={stepIndex} className="pl-1">{step}</li>
                                       ))}
                                     </ol>
                                   </div>
@@ -478,15 +562,18 @@ const MainPage = () => {
                 <Calendar className="w-5 h-5 mr-2 text-[#6B925C]" />
                 최근 활동
               </h2>
-              <Link href="/history" className="text-sm text-[#6B925C] flex items-center">
-                전체보기 <ArrowRight className="w-4 h-4 ml-1" />
+              <Link href="/history" className="text-sm text-[#6B925C] flex items-center group">
+                전체보기 <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
             
             <div className="space-y-3">
               {recentStretchings.length > 0 ? (
                 recentStretchings.map((item) => (
-                  <div key={item.id} className="bg-white rounded-xl p-4 shadow-sm flex justify-between items-center border border-gray-100 hover:border-[#93D400] transition-colors">
+                  <div 
+                    key={item.id} 
+                    className="bg-white rounded-xl p-4 shadow-sm flex justify-between items-center border border-gray-100 hover:border-[#93D400] transition-all duration-300 hover:shadow-md hover:translate-y-[-2px]"
+                  >
                     <div>
                       <h3 className="font-medium">{item.title}</h3>
                       <div className="flex items-center text-xs text-gray-500 mt-1">
@@ -496,19 +583,29 @@ const MainPage = () => {
                         {item.duration}
                       </div>
                     </div>
-                    <button className="text-[#6B925C] hover:scale-110 transition-transform">
+                    <button className="text-[#6B925C] hover:scale-110 transition-transform p-2 rounded-full hover:bg-[#F9FFEB]">
                       <PlayCircle className="w-6 h-6" />
                     </button>
                   </div>
                 ))
               ) : (
                 <div className="bg-white rounded-xl p-6 shadow-sm text-center border border-gray-100">
+                  <div className="w-16 h-16 mx-auto mb-3 opacity-50">
+                    <Image
+                      src="/assets/bugi.png"
+                      alt="부기 캐릭터"
+                      width={64}
+                      height={64}
+                      className="object-contain"
+                    />
+                  </div>
                   <p className="text-gray-500 mb-3">아직 활동 기록이 없습니다.</p>
                   <button 
                     onClick={createSession}
-                    className="bg-[#6B925C] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#5A7F4B] transition-colors"
+                    className="bg-[#6B925C] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#5A7F4B] transition-colors flex items-center mx-auto"
                   >
-                    첫 스트레칭 시작하기
+                    <span>첫 스트레칭 시작하기</span>
+                    <ArrowRight className="w-4 h-4 ml-1.5" />
                   </button>
                 </div>
               )}
