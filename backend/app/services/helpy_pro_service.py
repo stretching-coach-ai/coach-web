@@ -66,8 +66,8 @@ class HelpyProService:
         lifestyle = getattr(user_input, "lifestyle", None)
         if lifestyle:
             # Convert LifestylePattern object to dictionary
-            if hasattr(lifestyle, "dict"):
-                user_data["lifestyle"] = lifestyle.dict()
+            if hasattr(lifestyle, "model_dump"):
+                user_data["lifestyle"] = lifestyle.model_dump()
             elif hasattr(lifestyle, "__dict__"):
                 user_data["lifestyle"] = lifestyle.__dict__
             else:

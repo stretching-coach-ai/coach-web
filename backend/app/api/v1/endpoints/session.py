@@ -51,7 +51,7 @@ async def create_stretching_session(
     """새로운 스트레칭 세션 생성 및 AI 가이드 생성"""
     try:
         logger.info(f"Creating stretching session for session_id: {session_id}")
-        logger.debug(f"User input: {user_input.dict()}")
+        logger.debug(f"User input: {user_input.model_dump()}")
         
         # 0. 임베딩 서비스 초기화 확인
         await EmbeddingService.initialize()
@@ -150,7 +150,7 @@ async def create_stretching_session_stream(
     """새로운 스트레칭 세션 생성 및 AI 가이드 생성 (스트리밍 방식)"""
     try:
         logger.info(f"Creating streaming stretching session for session_id: {session_id}")
-        logger.debug(f"User input: {user_input.dict()}")
+        logger.debug(f"User input: {user_input.model_dump()}")
         
         # 0. 임베딩 서비스 초기화 확인
         await EmbeddingService.initialize()
@@ -237,7 +237,7 @@ async def create_stretching_session_stream_openai(
     """새로운 스트레칭 세션 생성 및 OpenAI를 사용한 AI 가이드 생성 (스트리밍 방식)"""
     try:
         logger.info(f"Creating OpenAI streaming stretching session for session_id: {session_id}")
-        logger.debug(f"User input: {user_input.dict()}")
+        logger.debug(f"User input: {user_input.model_dump()}")
         
         # 0. 임베딩 서비스 초기화 확인
         await EmbeddingService.initialize()

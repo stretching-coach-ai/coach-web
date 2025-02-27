@@ -5,6 +5,8 @@ from app.core.database import MongoManager
 from app.api.v1.endpoints.users import router as users_router
 from app.api.v1.endpoints.session import router as session_router
 from app.api.v1.endpoints.auth import router as auth_router
+from app.api.v1.endpoints.health_profiles import router as health_profiles_router
+from app.api.v1.endpoints.body_conditions import router as body_conditions_router
 from app.services.temp_session_service import TempSessionService
 from app.services.auth_service import AuthService
 from app.services.embedding_service import EmbeddingService
@@ -72,6 +74,20 @@ app.include_router(
     auth_router,
     prefix=f"{settings.API_V1_PREFIX}/auth",
     tags=["auth"]
+)
+
+# 건강 프로필 라우터 추가
+app.include_router(
+    health_profiles_router,
+    prefix=settings.API_V1_PREFIX,
+    tags=["health_profiles"]
+)
+
+# 신체 상태 라우터 추가
+app.include_router(
+    body_conditions_router,
+    prefix=settings.API_V1_PREFIX,
+    tags=["body_conditions"]
 )
 
 @app.on_event("startup")
