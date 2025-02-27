@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # Helpy Pro API Configuration
     HELPY_PRO_API_URL: str = os.getenv("HELPY_PRO_API_URL", "https://api-cloud-function.elice.io/9f071d94-a459-429d-a375-9601e521b079")
     HELPY_PRO_API_KEY: str = os.getenv("HELPY_PRO_API_KEY", "")
+    
+    # OpenAI API Configuration
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 
     # Session Configuration
     SESSION_EXPIRY_HOURS: int = int(os.getenv("SESSION_EXPIRY_HOURS", "24"))
@@ -44,4 +47,5 @@ print(f" - DEBUG: {settings.DEBUG}")
 print(f" - MONGODB_URL: {settings.MONGODB_URL}")
 print(f" - MONGODB_DB_NAME: {settings.MONGODB_DB_NAME}")
 print(f" - HELPY_PRO_API_URL: {settings.HELPY_PRO_API_URL}")
+print(f" - OPENAI_API_KEY: {'설정됨' if settings.OPENAI_API_KEY else '설정되지 않음'}")
 print(f" - SESSION_EXPIRY_HOURS: {settings.SESSION_EXPIRY_HOURS}")
