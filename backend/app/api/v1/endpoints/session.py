@@ -147,19 +147,28 @@ async def create_stretching_session(
         # 6. 로그인한 사용자의 경우 히스토리에도 저장
         if current_user:
             logger.info(f"Saving stretching session to user history: {current_user.id}")
-            # 완성된 스트레칭 세션 객체 생성
-            stretching_session = StretchingSession(
-                id=latest_stretching.id,
-                created_at=latest_stretching.created_at,
-                user_input=user_input,
-                ai_response=ai_response.text
-            )
+            # 완성된 스트레칭 세션 객체 생성 (딕셔너리 형태로 직접 생성)
+            stretching_session = {
+                "id": latest_stretching.id,
+                "created_at": latest_stretching.created_at,
+                "user_input": user_input.model_dump(),
+                "ai_response": ai_response.text,
+                "feedback": None
+            }
             
             # 사용자 히스토리에 저장
-            await user_service.add_stretching_session(
+            logger.info(f"Stretching session object created: {stretching_session['id']}")
+            logger.info(f"Stretching session data: {stretching_session}")
+            
+            result = await user_service.add_stretching_session(
                 user_id=current_user.id,
-                stretching_session=stretching_session.model_dump()
+                stretching_session=stretching_session
             )
+            
+            if result:
+                logger.info(f"Successfully added stretching session to user history")
+            else:
+                logger.error(f"Failed to add stretching session to user history")
         
         return ai_response
         

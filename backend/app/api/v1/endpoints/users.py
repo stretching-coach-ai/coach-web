@@ -53,13 +53,12 @@ async def delete_user(
             detail="You can only delete your own account"
         )
     
-    # 비밀번호 확인 (auth_service를 통해 검증)
+    
     user = await user_service.get_user_by_email(current_user.email, include_password=True)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # 비밀번호 검증 로직은 auth_service에 구현되어 있어야 함
-    # 여기서는 간단히 처리
+    
     from app.core.security import verify_password
     if not verify_password(delete_data.password, user["password"]):
         raise HTTPException(
@@ -95,8 +94,14 @@ async def get_my_stretching_history(
     current_user: UserResponse = Depends(get_current_user_or_403)
 ):
     """현재 로그인한 사용자의 스트레칭 히스토리 조회"""
-    history = await user_service.get_stretching_history(current_user.id, limit, skip)
-    return history
+    try:
+        history = await user_service.get_stretching_history(current_user.id, limit, skip)
+        return history
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error retrieving stretching history: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"스트레칭 히스토리 조회 중 오류가 발생했습니다: {str(e)}")
 
 @router.get("/me/stretching/{stretching_id}", response_model=StretchingSession)
 async def get_my_stretching_session(

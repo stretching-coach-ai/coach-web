@@ -1,63 +1,55 @@
 from motor.motor_asyncio import AsyncIOMotorClient
-from app.core.config import settings
 import logging
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 class MongoManager:
-    """MongoDB 연결을 관리하는 클래스"""
-    client = None
+    """MongoDB 연결 관리 클래스"""
+    client: AsyncIOMotorClient = None
     db = None
-
+    
     @classmethod
-    async def connect(cls):
-        """MongoDB 클라이언트 연결"""
-        logger.info(f"Connecting to MongoDB at {settings.MONGODB_URL}")
+    async def connect_to_mongo(cls):
+        """MongoDB 연결 설정"""
         try:
+            logger.info(f"Connecting to MongoDB at {settings.MONGODB_URL}")
             cls.client = AsyncIOMotorClient(settings.MONGODB_URL)
             cls.db = cls.client[settings.MONGODB_DB_NAME]
+            logger.info(f"Connected to MongoDB database: {settings.MONGODB_DB_NAME}")
             
             # 연결 테스트
-            await cls.client.admin.command('ping')
-            logger.info("MongoDB connection successful")
-            return True
+            await cls.db.command("ping")
+            logger.info("MongoDB connection test successful")
+            
+            return cls.client
         except Exception as e:
-            logger.error(f"MongoDB connection failed: {str(e)}")
+            logger.error(f"Failed to connect to MongoDB: {str(e)}")
             raise
-
+    
     @classmethod
-    async def initialize(cls):
-        """MongoDB 클라이언트 초기화 (이전 버전과의 호환성 유지)"""
-        return await cls.connect()
-
-    @classmethod
-    async def close(cls):
-        """MongoDB 클라이언트 연결 종료"""
+    async def close_mongo_connection(cls):
+        """MongoDB 연결 종료"""
         if cls.client:
             logger.info("Closing MongoDB connection")
             cls.client.close()
             cls.client = None
             cls.db = None
-            return True
-        return False
-
+    
     @classmethod
     def get_db(cls):
-        """MongoDB 데이터베이스 반환"""
-        if cls.db is None:
-            logger.warning("MongoDB connection not initialized. Using default connection.")
+        """데이터베이스 객체 반환"""
+        if not cls.db:
+            logger.warning("MongoDB connection not initialized, attempting to connect")
             cls.client = AsyncIOMotorClient(settings.MONGODB_URL)
             cls.db = cls.client[settings.MONGODB_DB_NAME]
         return cls.db
-
+    
     @classmethod
     def get_collection(cls, collection_name: str):
-        """MongoDB 컬렉션 반환"""
-        if cls.db is None:
-            logger.warning("MongoDB connection not initialized. Using default connection.")
-            cls.client = AsyncIOMotorClient(settings.MONGODB_URL)
-            cls.db = cls.client[settings.MONGODB_DB_NAME]
-        return cls.db[collection_name]
+        """컬렉션 객체 반환"""
+        db = cls.get_db()
+        return db[collection_name]
 
     @classmethod
     def initialize_db(cls):
