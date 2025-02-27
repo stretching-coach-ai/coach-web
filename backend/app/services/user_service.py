@@ -5,6 +5,7 @@ from app.services.temp_session_service import TempSessionService
 from bson import ObjectId
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+from passlib.hash import bcrypt
 
 class UserService:
     def __init__(self):
@@ -14,8 +15,14 @@ class UserService:
     async def create_user(self, user_data: UserCreate, session_id: str = None) -> str:
         """회원가입 (비회원 데이터가 있다면 연동)"""
         # 1. 기본 사용자 데이터로 계정 생성
-        user = UserDB(**user_data.model_dump())
-        user_dict = user.model_dump(exclude={"id"})
+        user_dict = user_data.model_dump()
+        user_dict["password"] = bcrypt.hash(user_dict["password"])
+        user_dict["created_at"] = datetime.utcnow()
+        
+        # _id 필드가 있으면 제거
+        if "id" in user_dict:
+            del user_dict["id"]
+        
         result = await self.collection.insert_one(user_dict)
         user_id = str(result.inserted_id)
 
