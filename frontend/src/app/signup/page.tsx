@@ -37,25 +37,32 @@ const signup = () => {
   };
 
   const handleSignup = async () => {
-    setIsLoading(true);
     try {
-      const response = await fetch('api/v1/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
-      });
+      const response = await fetch(
+        'http://localhost:8000/api/v1/auth/register',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            password,
+          }),
+        },
+      );
+
+      const result = await response.json();
 
       if (!response.ok) {
-        toggleVisibillity(errorRef, true);
-        const data = await response.json();
-        throw new Error('회원가입 실패', data.message);
+        console.error('회원가입 실패:', result);
+        throw new Error(
+          `회원가입 실패: ${result.message || '알 수 없는 오류'}`,
+        );
       }
-      router.push('/onboarding');
+
+      console.log('회원가입 성공:', result);
+      router.push('/auth/login');
     } catch (error) {
-      toggleVisibillity(errorRef, true);
       console.error('오류 발생:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
