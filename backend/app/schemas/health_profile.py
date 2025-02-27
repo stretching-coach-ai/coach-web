@@ -7,6 +7,9 @@ class Gender(str, Enum):
     MALE = "male"
     FEMALE = "female"
     OTHER = "other"
+    MALE_KR = "남성"
+    FEMALE_KR = "여성"
+    OTHER_KR = "기타"
 
 class LifestylePattern(BaseModel):
     """생활 패턴 정보"""
