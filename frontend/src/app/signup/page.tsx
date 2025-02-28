@@ -37,23 +37,89 @@ const signup = () => {
   };
 
   const handleSignup = async () => {
+    if (!email || !password || !name) {
+      alert('이메일, 비밀번호, 이름을 모두 입력해주세요.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const response = await fetch('api/v1/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
-      });
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      
+      // 요청 데이터 로깅
+      const requestData = {
+        email,
+        password,
+        name
+      };
+      console.log('회원가입 요청 데이터:', requestData);
+      
+      const response = await fetch(
+        `${apiUrl}/api/v1/auth/register`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestData),
+        },
+      );
+
+      // 응답 상태 로깅
+      console.log('응답 상태:', response.status, response.statusText);
+      
+      // 응답 본문 가져오기
+      const responseText = await response.text();
+      console.log('응답 본문 텍스트:', responseText);
+      
+      let result;
+      try {
+        // 텍스트가 비어있지 않은 경우에만 JSON 파싱 시도
+        result = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        console.error('응답 파싱 오류:', parseError);
+        if (!response.ok) {
+          toggleVisibillity(errorRef, true);
+          throw new Error(`회원가입 실패: 상태 코드 ${response.status}`);
+        }
+      }
 
       if (!response.ok) {
+        console.error('회원가입 실패:', result);
         toggleVisibillity(errorRef, true);
-        const data = await response.json();
-        throw new Error('회원가입 실패', data.message);
+        throw new Error(
+          `회원가입 실패: ${result?.detail || result?.message || '알 수 없는 오류'}`,
+        );
       }
-      router.push('/onboarding');
+
+      console.log('회원가입 성공:', result);
+      
+      // 회원가입 후 자동 로그인 처리
+      try {
+        console.log('자동 로그인 시도 중...');
+        const loginResponse = await fetch(
+          `${apiUrl}/api/v1/auth/login`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ email, password }),
+          },
+        );
+        
+        if (loginResponse.ok) {
+          console.log('자동 로그인 성공');
+          // 메인 페이지로 리다이렉트
+          router.push('/main');
+        } else {
+          console.log('자동 로그인 실패, 로그인 페이지로 이동');
+          router.push('/auth/login');
+        }
+      } catch (loginError) {
+        console.error('자동 로그인 오류:', loginError);
+        router.push('/auth/login');
+      }
     } catch (error) {
-      toggleVisibillity(errorRef, true);
       console.error('오류 발생:', error);
+      toggleVisibillity(errorRef, true);
     } finally {
       setIsLoading(false);
     }

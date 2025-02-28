@@ -62,11 +62,11 @@ export const UserInfoForm = ({ onDotButtonClick }: Props) => {
   };
 
   return (
-    <div className={`${Stardust.className} mt-9 w-[390px] m-auto`}>
+    <div className={`${Stardust.className} w-full flex flex-col items-center bg-white rounded-lg p-4`}>
       <Header title="본인 정보를<br />입력해라부기" />
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-[30px]">
-          <div className="space-y-9 w-[339px]">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-[30px] w-full max-w-[339px]">
+          <div className="space-y-9 w-full">
             <FormField
               control={form.control}
               name="age"
@@ -168,13 +168,8 @@ export const UserInfoForm = ({ onDotButtonClick }: Props) => {
               type="submit"
               variant="main"
               size="main"
-              // disabled={
-              //   !form.watch('age') ||
-              //   !form.watch('job') ||
-              //   !form.watch('dailyRoutine')
-              // }
               disabled={!form.formState.isValid}
-              // onClick={() => onDotButtonClick(1)}
+              className="w-full"
             >
               다 입력했어요
             </Button>

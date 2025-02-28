@@ -6,7 +6,7 @@ from passlib.hash import bcrypt
 
 from app.core.database import MongoManager
 from app.services.user_service import UserService
-from app.schemas.user import UserResponse
+from app.schemas.user import UserResponse, UserCreate
 
 class AuthService:
     def __init__(self):
@@ -25,15 +25,12 @@ class AuthService:
             raise HTTPException(status_code=400, detail="Email already registered")
             
         # 2. 사용자 생성
-        user_data = {
-            "email": email,
-            "password": bcrypt.hash(password),
-            "created_at": datetime.utcnow()
-        }
-        
-        # name이 제공된 경우 추가
-        if name:
-            user_data["name"] = name
+        # UserCreate 객체 생성
+        user_data = UserCreate(
+            email=email,
+            password=password,
+            name=name
+        )
         
         # 3. 사용자 생성 (기존 UserService 활용)
         user_id = await self.user_service.create_user(user_data, session_id)

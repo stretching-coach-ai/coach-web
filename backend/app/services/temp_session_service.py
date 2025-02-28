@@ -145,3 +145,90 @@ class TempSessionService:
         collection = MongoManager.get_collection(cls.collection_name)
         result = await collection.delete_one({"session_id": session_id})
         return result.deleted_count > 0
+        
+    @classmethod
+    async def update_session_data(
+        cls,
+        session_id: str,
+        stretching_id: str,
+        ai_response: str,
+        user_input: UserInput
+    ) -> Optional[TempSession]:
+        """스트레칭 세션의 AI 응답 업데이트 및 ai_requests 컬렉션에 저장"""
+        # 1. 스트레칭 세션의 AI 응답 업데이트
+        updated_session = await cls.update_stretching_ai_response(
+            session_id=session_id,
+            stretching_id=stretching_id,
+            ai_response=ai_response
+        )
+        
+        # 2. ai_requests 컬렉션에 데이터 저장
+        try:
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            ai_requests_collection = MongoManager.get_collection("ai_requests")
+            await ai_requests_collection.insert_one({
+                "user_id": user_input.user_id if hasattr(user_input, 'user_id') and user_input.user_id else "anonymous",
+                "session_id": session_id,
+                "user_input": user_input.model_dump() if hasattr(user_input, 'model_dump') else user_input,
+                "ai_response": ai_response,
+                "created_at": datetime.now()
+            })
+            logger.info(f"AI request saved to ai_requests collection for session: {session_id}")
+        except Exception as e:
+            logger.error(f"Failed to save AI request to ai_requests collection: {str(e)}")
+        
+        return updated_session
+    
+    @classmethod
+    async def add_conversation_history(
+        cls,
+        session_id: str,
+        question: str,
+        response: str
+    ) -> Optional[TempSession]:
+        """세션에 대화 기록 추가"""
+        collection = MongoManager.get_collection(cls.collection_name)
+        
+        # 현재 시간
+        now = datetime.utcnow()
+        
+        # 대화 기록 데이터
+        conversation_entry = {
+            "id": str(uuid.uuid4()),
+            "question": question,
+            "response": response,
+            "timestamp": now
+        }
+        
+        # 세션 업데이트
+        result = await collection.update_one(
+            {"session_id": session_id},
+            {
+                "$push": {"conversation_history": conversation_entry},
+                "$set": {"updated_at": now}
+            }
+        )
+        
+        if result.modified_count == 0:
+            return None
+            
+        # 업데이트된 세션 조회
+        return await cls.get_session(session_id)
+        
+    @classmethod
+    async def get_conversation_history(
+        cls,
+        session_id: str
+    ) -> List[dict]:
+        """세션의 대화 기록 조회"""
+        session = await cls.get_session(session_id)
+        if not session:
+            return []
+            
+        # 대화 기록이 없으면 빈 리스트 반환
+        if not hasattr(session, "conversation_history"):
+            return []
+            
+        return session.conversation_history

@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 from app.schemas.session import StretchingSession
 from app.core.config import settings
@@ -14,6 +14,7 @@ class TempSession(BaseModel):
         description="세션 만료 시간"
     )
     stretching_sessions: List[StretchingSession] = Field(default_factory=list, description="스트레칭 세션 목록")
+    conversation_history: List[Dict[str, Any]] = Field(default_factory=list, description="대화 기록")
 
     model_config = {
         "populate_by_name": True,

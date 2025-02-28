@@ -10,46 +10,46 @@ import { AiChat02Icon } from 'hugeicons-react';
 export const Fnb = () => {
   const pathname = usePathname();
   return (
-    <footer className="w-full h-[63px] fixed bottom-0 left-0 right-0 z-40">
-      <div className="w-full h-16 fixed bottom-0 left-0 right-0 bg-[#F9FFEB] rounded-t-[14px]">
-        <div className="flex justify-between px-[43px] pt-[12px]">
+    <footer className="max-w-md w-full h-[63px] fixed bottom-0 left-0 right-0 z-40 m-auto">
+      <div className="max-w-md w-full h-16 fixed bottom-0 bg-[#F9FFEB] rounded-t-[14px]">
+        <div className="flex justify-between px-[5%] sm:px-[43px] pt-[12px] max-w-[390px] mx-auto">
           <Link
-            href="/onboarding"
+            href="/"
             className="flex flex-col text-[10px] font-medium text-[#6B925C] justify-center items-center"
-            style={{ width: 'calc(100vw / 8.7)' }}
+            style={{ width: 'calc(100% / 4)' }}
           >
             <Home10Icon
-              className={`w-8 h-8 ${pathname === '/onboarding' ? 'text-[#6B925C]' : 'text-black'}`}
+              className={`w-6 h-6 sm:w-8 sm:h-8 ${pathname === '/' ? 'text-[#6B925C]' : 'text-black'}`}
             />
             <p className="mt-[2px]">메인</p>
           </Link>
           <Link
-            href="/chating"
+            href="/kkubugi"
             className="flex flex-col text-[10px] font-medium text-[#6B925C] justify-center items-center"
-            style={{ width: 'calc(100vw / 8.7)' }}
+            style={{ width: 'calc(100% / 4)' }}
           >
             <AiChat02Icon
-              className={`w-8 h-8 ${pathname === '/chating' ? 'text-[#6B925C]' : 'text-black'}`}
+              className={`w-6 h-6 sm:w-8 sm:h-8 ${pathname === '/kkubugi' ? 'text-[#6B925C]' : 'text-black'}`}
             />
-            <p className="mt-[2px]">채팅</p>
+            <p className="mt-[2px]">꾸부기</p>
           </Link>
           <Link
-            href="/"
+            href="/history"
             className="flex flex-col text-[10px] font-medium text-[#6B925C] justify-center items-center"
-            style={{ width: 'calc(100vw / 8.7)' }}
+            style={{ width: 'calc(100% / 4)' }}
           >
             <ChartIcon
-              className={`w-8 h-8 ${pathname === '/' ? 'text-[#6B925C]' : 'text-black'}`}
+              className={`w-6 h-6 sm:w-8 sm:h-8 ${pathname === '/history' ? 'text-[#6B925C]' : 'text-black'}`}
             />
             <p className="mt-[2px]">기록</p>
           </Link>
           <Link
-            href="/"
+            href="/more"
             className="flex flex-col text-[10px] font-medium text-[#6B925C] justify-center items-center"
-            style={{ width: 'calc(100vw / 8.7)' }}
+            style={{ width: 'calc(100% / 4)' }}
           >
             <MoreHorizontalCircle01Icon
-              className={`w-8 h-8 ${pathname === '/' ? 'text-[#6B925C]' : 'text-black'}`}
+              className={`w-6 h-6 sm:w-8 sm:h-8 ${pathname === '/more' ? 'text-[#6B925C]' : 'text-black'}`}
             />
             <p className="mt-[2px]">더보기</p>
           </Link>

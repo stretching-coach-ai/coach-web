@@ -26,9 +26,9 @@ export const BodyPartSelector = () => {
 
   return (
     <div
-      className={`${Stardust.className} mt-9 w-[390px] flex flex-col justify-center m-auto`}
+      className={`${Stardust.className} w-full flex flex-col items-center`}
     >
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-2 w-full max-w-[339px] mx-auto">
         <Image
           src={
             name === null ? '/assets/crying-bugi.png' : '/assets/bugi-head.png'
@@ -2011,7 +2011,7 @@ export const BodyPartSelector = () => {
           const updatedUserInfo = { ...storedUserInfo, selected_body_parts };
 
           localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
-          router.replace('/chating');
+          router.replace('/chatting');
         }}
       >
         선택했어요

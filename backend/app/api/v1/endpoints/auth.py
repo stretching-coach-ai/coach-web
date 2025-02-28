@@ -4,6 +4,7 @@ from typing import Optional
 from app.services.auth_service import AuthService
 from app.schemas.auth import LoginCredentials, AuthResponse
 from app.schemas.user import UserCreate, UserResponse
+from app.core.config import settings
 
 router = APIRouter()
 auth_service = AuthService()

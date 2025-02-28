@@ -4,7 +4,11 @@ from app.core.config import settings
 from app.core.database import MongoManager
 from app.api.v1.endpoints.users import router as users_router
 from app.api.v1.endpoints.session import router as session_router
+from app.api.v1.endpoints.session import router as muscles_router  # muscles 라우터로 session 라우터 재사용
 from app.api.v1.endpoints.auth import router as auth_router
+from app.api.v1.endpoints.health_profiles import router as health_profiles_router
+from app.api.v1.endpoints.body_conditions import router as body_conditions_router
+from app.api.v1.endpoints.kkubugi import router as kkubugi_router
 from app.services.temp_session_service import TempSessionService
 from app.services.auth_service import AuthService
 from app.services.embedding_service import EmbeddingService
@@ -17,7 +21,7 @@ import os
 
 # 로깅 설정
 logging.basicConfig(
-    level=logging.DEBUG if settings.DEBUG else logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),  # 콘솔 출력
@@ -48,7 +52,7 @@ app = FastAPI(
 # CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3002"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -63,8 +67,15 @@ app.include_router(
 
 app.include_router(
     session_router,
-    prefix=settings.API_V1_PREFIX,
+    prefix=f"{settings.API_V1_PREFIX}/session",
     tags=["session"]
+)
+
+# muscles 라우터 추가 - session_router에서 muscles 관련 엔드포인트 재사용
+app.include_router(
+    muscles_router,
+    prefix=settings.API_V1_PREFIX,
+    tags=["muscles"]
 )
 
 # auth 라우터는 /api/v1/auth 접두사로 변경
@@ -72,6 +83,27 @@ app.include_router(
     auth_router,
     prefix=f"{settings.API_V1_PREFIX}/auth",
     tags=["auth"]
+)
+
+# 건강 프로필 라우터 추가
+app.include_router(
+    health_profiles_router,
+    prefix=settings.API_V1_PREFIX,
+    tags=["health_profiles"]
+)
+
+# 신체 상태 라우터 추가
+app.include_router(
+    body_conditions_router,
+    prefix=settings.API_V1_PREFIX,
+    tags=["body_conditions"]
+)
+
+# 꾸부기 챗봇 라우터 추가
+app.include_router(
+    kkubugi_router,
+    prefix=f"{settings.API_V1_PREFIX}/kkubugi",
+    tags=["kkubugi"]
 )
 
 @app.on_event("startup")

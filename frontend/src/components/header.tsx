@@ -7,7 +7,7 @@ interface Props {
 
 export const Header = ({ title }: Props) => {
   return (
-    <div className="flex items-end gap-2">
+    <div className="flex items-end gap-2 w-full max-w-[339px] mx-auto">
       <Image
         src="/assets/bugi-head.png"
         alt="메인 캐릭터 부기 이미지"

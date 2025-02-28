@@ -1,5 +1,6 @@
 """
 임베딩 관리 및 검색 서비스
+BGE 모델 사용 버전
 """
 import json
 import os
@@ -32,7 +33,14 @@ class EmbeddingService:
             # 1. 데이터 파일 경로 설정
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             data_path = os.path.join(base_dir, "data", "data.json")
-            embeddings_path = os.path.join(base_dir, "data", "embeddings.json")
+            embeddings_path = os.path.join(base_dir, "data", "embeddings_bge.json")  # BGE 임베딩 파일 경로 변경
+            
+            # 기존 임베딩 파일 경로를 폴백으로 설정 (BGE 임베딩 파일이 없을 경우 기존 파일 사용)
+            if not os.path.exists(embeddings_path):
+                fallback_path = os.path.join(base_dir, "data", "embeddings.json")
+                if os.path.exists(fallback_path):
+                    logger.warning(f"BGE 임베딩 파일을 찾을 수 없어 기존 LaBSE 임베딩 파일을 사용합니다: {fallback_path}")
+                    embeddings_path = fallback_path
             
             # 2. 데이터 로드
             logger.info(f"데이터 로드 중: {data_path}")
@@ -45,8 +53,9 @@ class EmbeddingService:
                 cls._embeddings = json.load(f)
             
             # 4. 모델 로드
-            logger.info("LaBSE 모델 로드 중...")
-            cls._model = SentenceTransformer('sentence-transformers/LaBSE')
+            logger.info("BGE 모델 로드 중...")
+            # 다국어(영어+중국어) 지원 모델 사용
+            cls._model = SentenceTransformer('BAAI/bge-large-zh-v1.5')
             
             # 5. 메타데이터에서 모든 근육 목록 가져오기
             front_muscles = cls._data['metadata'].get('front_muscles', [])
