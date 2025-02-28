@@ -51,6 +51,12 @@ export default function StreamingTestPage() {
       return;
     }
     
+    // 통증 설명 길이 검증 추가
+    if (painDescription.trim().length < 10) {
+      alert('통증 설명은 10자 이상 입력해주세요.');
+      return;
+    }
+    
     setLoading(true);
     setRegularResponse('');
     
@@ -105,6 +111,12 @@ export default function StreamingTestPage() {
   const handleHelpyProStreamingSubmit = async () => {
     if (!sessionId) {
       alert('세션이 아직 생성되지 않았습니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+    
+    // 통증 설명 길이 검증 추가
+    if (painDescription.trim().length < 10) {
+      alert('통증 설명은 10자 이상 입력해주세요.');
       return;
     }
     
@@ -223,6 +235,12 @@ export default function StreamingTestPage() {
   const handleOpenAIStreamingSubmit = async () => {
     if (!sessionId) {
       alert('세션이 아직 생성되지 않았습니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+    
+    // 통증 설명 길이 검증 추가
+    if (painDescription.trim().length < 10) {
+      alert('통증 설명은 10자 이상 입력해주세요.');
       return;
     }
     
@@ -383,9 +401,18 @@ export default function StreamingTestPage() {
           <textarea 
             value={painDescription}
             onChange={(e) => setPainDescription(e.target.value)}
-            className="w-full p-2 border rounded mb-2"
+            className={`w-full p-2 border rounded mb-2 ${
+              painDescription.trim().length > 0 && painDescription.trim().length < 10 
+                ? 'border-red-500' 
+                : ''
+            }`}
             rows={3}
           />
+          {painDescription.trim().length > 0 && painDescription.trim().length < 10 && (
+            <p className="text-red-500 text-sm mb-2">
+              통증 설명은 10자 이상 입력해주세요. (현재: {painDescription.trim().length}자)
+            </p>
+          )}
           
           <label className="block mb-1">신체 부위:</label>
           <input 

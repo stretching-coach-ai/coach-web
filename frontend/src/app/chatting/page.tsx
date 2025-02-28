@@ -36,6 +36,17 @@ export default function ChatUI() {
   const sendMessage = async () => {
     if (!input.trim()) return;
 
+    // 입력 길이 검증 추가
+    if (input.trim().length < 10) {
+      const errorMessage = {
+        id: messages.length + 1,
+        text: '아픈 부위에 대해 조금 더 자세히 설명해 주세요 (최소 10자 이상)',
+        sender: 'bot',
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      return;
+    }
+
     const userMessage = {
       id: messages.length + 1,
       text: input,
