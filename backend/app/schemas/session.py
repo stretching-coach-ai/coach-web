@@ -7,7 +7,7 @@ class StretchingSession(BaseModel):
     """개별 스트레칭 세션 정보"""
     id: str = Field(..., description="스트레칭 세션 ID")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="스트레칭 세션 생성 시간")
-    user_input: UserInput = Field(..., description="사용자 입력 데이터")
+    user_input: Optional[UserInput] = Field(None, description="사용자 입력 데이터")
     ai_response: Optional[str] = Field(None, description="AI 추천 응답 텍스트")
     feedback: Optional[str] = Field(None, description="사용자 피드백")
 
