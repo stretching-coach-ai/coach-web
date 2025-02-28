@@ -2011,7 +2011,7 @@ export const BodyPartSelector = () => {
           const updatedUserInfo = { ...storedUserInfo, selected_body_parts };
 
           localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
-          router.replace('/chating');
+          router.replace('/chatting');
         }}
       >
         선택했어요
