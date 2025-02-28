@@ -29,7 +29,11 @@ export const Fnb = () => {
             style={{ width: 'calc(100% / 4.5)' }}
           >
             <AiChat02Icon
-              className={`w-6 h-6 sm:w-8 sm:h-8 ${pathname === '/onboarding' || '/chatting' ? 'text-[#6B925C]' : 'text-black'}`}
+              className={`w-6 h-6 sm:w-8 sm:h-8 ${
+                ['/onboarding', '/chatting'].includes(pathname)
+                  ? 'text-[#6B925C]'
+                  : 'text-black'
+              }`}
             />
             <p className="mt-[2px]">채팅</p>
           </Link>
