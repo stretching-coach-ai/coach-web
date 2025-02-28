@@ -1,6 +1,7 @@
 'use client';
 
 import { Fnb } from '@/components/Fnb';
+import { Gnb } from '@/components/Gnb';
 
 export default function MoreLayout({
   children,
@@ -13,4 +14,4 @@ export default function MoreLayout({
       <Fnb />
     </div>
   );
-} 
+}

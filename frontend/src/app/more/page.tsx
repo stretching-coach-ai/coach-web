@@ -3,9 +3,21 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { Gnb } from '@/components/Gnb';
 import { Fnb } from '@/components/Fnb';
 import { StardustBold, Stardust } from '../fonts';
-import { LogOut, User, Settings, Info, Heart, Shield, HelpCircle, ChevronRight, FileText, Lock } from 'lucide-react';
+import {
+  LogOut,
+  User,
+  Settings,
+  Info,
+  Heart,
+  Shield,
+  HelpCircle,
+  ChevronRight,
+  FileText,
+  Lock,
+} from 'lucide-react';
 import Link from 'next/link';
 
 const MorePage = () => {
@@ -29,10 +41,10 @@ const MorePage = () => {
           credentials: 'include',
           headers: {
             'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          }
+            Pragma: 'no-cache',
+          },
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           console.log('사용자 정보 응답:', data);
@@ -47,7 +59,10 @@ const MorePage = () => {
             }
           }
         } else {
-          console.error('사용자 정보를 가져오는데 실패했습니다:', response.status);
+          console.error(
+            '사용자 정보를 가져오는데 실패했습니다:',
+            response.status,
+          );
           // 로컬 스토리지에서 사용자 정보 확인
           const storedUser = localStorage.getItem('user');
           if (storedUser) {
@@ -65,7 +80,7 @@ const MorePage = () => {
         setLoading(false);
       }
     };
-    
+
     checkAuth();
   }, []);
 
@@ -76,7 +91,7 @@ const MorePage = () => {
         method: 'POST',
         credentials: 'include',
       });
-      
+
       if (response.ok) {
         // 로컬 스토리지에서 사용자 정보 삭제
         localStorage.removeItem('user');
@@ -150,10 +165,12 @@ const MorePage = () => {
 
   return (
     <main className="max-w-md mx-auto bg-gray-50 min-h-screen pb-20">
-      <div className="bg-white rounded-xl shadow-sm mx-2 my-3 p-4">
-        {/* 헤더 */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className={`${StardustBold.className} text-[#689700] text-2xl`}>더보기</h1>
+      <Gnb></Gnb>
+      <div className="bg-white rounded-xl shadow-sm mx-2 mb-3 p-4">
+        <div className="flex items-center justify-between mb-6 mt-[82px]">
+          <h1 className={`${StardustBold.className} text-[#689700] text-2xl`}>
+            더보기
+          </h1>
           <div className="w-12 h-12">
             <Image
               src="/assets/bugi.png"
@@ -164,7 +181,7 @@ const MorePage = () => {
             />
           </div>
         </div>
-        
+
         {/* 사용자 정보 */}
         <div className="bg-[#F9FFEB] rounded-xl p-4 mb-6">
           {user ? (
@@ -173,7 +190,9 @@ const MorePage = () => {
                 <User className="w-6 h-6 text-[#6B925C]" />
               </div>
               <div>
-                <h2 className={`${Stardust.className} text-lg font-bold`}>{user.name} 님</h2>
+                <h2 className={`${Stardust.className} text-lg font-bold`}>
+                  {user.name} 님
+                </h2>
                 <p className="text-sm text-gray-600">{user.email}</p>
               </div>
             </div>
@@ -184,11 +203,15 @@ const MorePage = () => {
                   <User className="w-6 h-6 text-[#6B925C]" />
                 </div>
                 <div>
-                  <h2 className={`${Stardust.className} text-lg font-bold`}>로그인이 필요합니다</h2>
-                  <p className="text-sm text-gray-600">로그인하고 더 많은 기능을 이용해보세요</p>
+                  <h2 className={`${Stardust.className} text-lg font-bold`}>
+                    로그인이 필요합니다
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    로그인하고 더 많은 기능을 이용해보세요
+                  </p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => router.push('/auth/login')}
                 className="bg-[#93D400] text-white px-4 py-2 rounded-lg text-sm"
               >
@@ -197,7 +220,7 @@ const MorePage = () => {
             </div>
           )}
         </div>
-        
+
         {/* 메뉴 목록 */}
         <div className="space-y-4">
           {/* 계정 관련 메뉴 */}
@@ -282,6 +305,25 @@ const MorePage = () => {
                   <div className="flex items-center">
                     <Shield className="w-5 h-5 text-[#6B925C] mr-3" />
                     <span>개인정보 처리방침</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </Link>
+              </li>
+            </ul>
+          </div>
+          
+          {/* 지원 메뉴 (팀원 코드에서 통합) */}
+          <div className="border-b pb-2">
+            <h3 className="text-sm font-medium text-gray-500 mb-2">지원</h3>
+            <ul className="space-y-3">
+              <li>
+                <Link
+                  href="/help"
+                  className="w-full flex items-center justify-between py-2 px-1"
+                >
+                  <div className="flex items-center">
+                    <HelpCircle className="w-5 h-5 text-[#6B925C] mr-3" />
+                    <span className={`${Stardust.className}`}>도움말</span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400" />
                 </Link>
@@ -413,10 +455,9 @@ const MorePage = () => {
         )}
       </div>
       
-      {/* 하단 네비게이션 */}
       <Fnb />
     </main>
   );
 };
 
-export default MorePage; 
+export default MorePage;
