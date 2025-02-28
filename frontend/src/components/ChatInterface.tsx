@@ -20,7 +20,7 @@ interface ChatInterfaceProps {
 
 export const ChatInterface = ({
   sessionId,
-  initialMessages = [{ id: Date.now() - 1000, text: '어떻게 아프냐부기?', sender: 'bot' }],
+  initialMessages = [{ id: 1, text: '어떻게 아프냐부기?', sender: 'bot' }],
   onSendMessage,
   isLoading: parentIsLoading,
 }: ChatInterfaceProps) => {
@@ -29,6 +29,7 @@ export const ChatInterface = ({
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const initializedRef = useRef(false);
+  const botMessageListenerRef = useRef<((event: Event) => void) | null>(null);
 
   // 부모 컴포넌트의 로딩 상태 변경 감지
   useEffect(() => {
@@ -39,20 +40,26 @@ export const ChatInterface = ({
 
   // 초기 메시지 설정 (한 번만 실행)
   useEffect(() => {
-    if (!initializedRef.current && initialMessages.length > 0) {
+    if (!initializedRef.current) {
       console.log('초기 메시지 설정 (props):', initialMessages);
       // 중복 메시지 방지를 위해 기존 메시지와 비교하지 않고 한 번만 설정
       setMessages(initialMessages);
       initializedRef.current = true;
     }
-  }, [initialMessages]);
+  }, []);  // 의존성 배열을 비워서 컴포넌트 마운트 시 한 번만 실행되도록 함
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // botMessage 이벤트 리스너 추가
+  // botMessage 이벤트 리스너 추가 (중복 등록 방지)
   useEffect(() => {
+    // 이전 리스너가 있으면 제거
+    if (botMessageListenerRef.current) {
+      window.removeEventListener('botMessage', botMessageListenerRef.current);
+      console.log('이전 botMessage 이벤트 리스너 제거됨');
+    }
+
     const handleBotMessage = (event: CustomEvent) => {
       const botMessage = event.detail as Message;
       console.log('봇 메시지 이벤트 수신:', botMessage);
@@ -70,16 +77,20 @@ export const ChatInterface = ({
       });
     };
 
-    // 이벤트 리스너 등록
-    window.addEventListener('botMessage', handleBotMessage as EventListener);
-    console.log('botMessage 이벤트 리스너 등록됨');
+    // 새 리스너 등록 및 참조 저장
+    botMessageListenerRef.current = handleBotMessage as EventListener;
+    window.addEventListener('botMessage', botMessageListenerRef.current);
+    console.log('새 botMessage 이벤트 리스너 등록됨');
 
     // 컴포넌트 언마운트 시 이벤트 리스너 제거
     return () => {
-      window.removeEventListener('botMessage', handleBotMessage as EventListener);
-      console.log('botMessage 이벤트 리스너 제거됨');
+      if (botMessageListenerRef.current) {
+        window.removeEventListener('botMessage', botMessageListenerRef.current);
+        console.log('botMessage 이벤트 리스너 제거됨');
+        botMessageListenerRef.current = null;
+      }
     };
-  }, []);
+  }, []);  // 의존성 배열을 비워서 컴포넌트 마운트 시 한 번만 실행되도록 함
 
   // 메시지 목록이 변경될 때마다 로그 출력
   useEffect(() => {

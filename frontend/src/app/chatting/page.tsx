@@ -19,9 +19,9 @@ export default function ChatUI() {
   const [isInitializing, setIsInitializing] = useState(true);
   const sessionInitializedRef = useRef(false);
 
-  // 고유한 ID를 가진 초기 메시지 설정
+  // 고유한 ID를 가진 초기 메시지 설정 - 고정된 ID 사용
   const initialMessages: Message[] = [
-    { id: Date.now() - 1000, text: '어떻게 아프냐부기?', sender: 'bot' },
+    { id: 1, text: '어떻게 아프냐부기?', sender: 'bot' },
   ];
 
   // 현재 세션 정보 가져오기
