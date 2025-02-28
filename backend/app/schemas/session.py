@@ -22,7 +22,6 @@ class StretchingSession(BaseModel):
                     "occupation": "사무직 회사원",
                     "lifestyle": "주 5일 근무, 하루 8시간 앉아서 일하고, 주 1회 운동, 하루 6시간 수면",
                     "selected_body_parts": "목, 어깨",
-                    "pain_level": 7,
                     "pain_description": "장시간 컴퓨터 작업으로 인한 목과 어깨 통증이 심하고, 특히 오른쪽 어깨가 뻐근하고 움직일 때 불편함"
                 },
                 "ai_response": "사용자 상태 분석:\n장시간의 컴퓨터 작업으로 인한 목과 어깨 통증을 호소하고 계십니다...",
@@ -61,7 +60,6 @@ class SessionResponse(SessionBase):
                             "occupation": "사무직 회사원",
                             "lifestyle": "주 5일 근무, 하루 8시간 앉아서 일하고, 주 1회 운동, 하루 6시간 수면",
                             "selected_body_parts": "목, 어깨",
-                            "pain_level": 7,
                             "pain_description": "장시간 컴퓨터 작업으로 인한 목과 어깨 통증이 심하고, 특히 오른쪽 어깨가 뻐근하고 움직일 때 불편함"
                         },
                         "ai_response": "사용자 상태 분석:\n장시간의 컴퓨터 작업으로 인한 목과 어깨 통증을 호소하고 계십니다...",

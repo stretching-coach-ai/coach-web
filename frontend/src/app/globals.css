@@ -96,6 +96,83 @@ body,
   }
 }
 
+/* 메시지 스타일링 */
+.message-content {
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.message-content a {
+  color: #3b82f6;
+  text-decoration: underline;
+  transition: color 0.2s;
+  word-break: break-all;
+  display: inline-block;
+  max-width: 100%;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+}
+
+.message-content a:hover {
+  color: #2563eb;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* 참고 자료 섹션 스타일링 */
+.message-content .bg-blue-50 {
+  border-left: 3px solid #3b82f6;
+  transition: all 0.2s;
+  margin: 0.75rem 0;
+}
+
+.message-content .bg-blue-50:hover {
+  background-color: #e0f2fe;
+  transform: translateX(2px);
+}
+
+.message-content .bg-blue-50 a {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0.5rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+.message-content .bg-blue-50 a:hover {
+  background-color: transparent;
+  text-decoration: underline;
+}
+
+.message-content span.font-bold {
+  font-weight: 600;
+}
+
+.message-content span.text-green-700 {
+  color: #15803d;
+  font-weight: 700;
+  display: block;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+/* 첫 번째 섹션 제목은 상단 마진 없음 */
+.message-content span.text-green-700:first-child {
+  margin-top: 0;
+}
+
+/* 스트레칭 단계 스타일링 */
+.message-content ul, .message-content ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.message-content ul li, .message-content ol li {
+  margin-bottom: 0.25rem;
+}
+
 /* embla css */
 .embla {
   max-width: 48rem;

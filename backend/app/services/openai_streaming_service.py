@@ -5,6 +5,7 @@ import json
 import time
 import asyncio
 from contextlib import asynccontextmanager
+from fastapi import HTTPException
 
 from app.core.config import settings
 from app.schemas.user_input import UserInput
@@ -38,7 +39,9 @@ JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를
 3. 사용자의 상태, 직업, 생활 습관을 고려한 맞춤형 가이드를 제공하세요.
 4. 각 스트레칭 동작에 대해 단계별 지침, 호흡법, 반복 횟수를 명확히 설명하세요.
 5. 필요한 경우 추가 정보를 찾아 포함하세요.
-6. 참고 자료 섹션에 사용된 학술 자료나 스트레칭 정보의 출처 URL을 포함하세요.
+6. 참고 자료 섹션에는 실제 URL이 있는 경우에만 포함하세요. URL이 없는 경우 출처 링크 필요와 같은 텍스트를 사용하지 말고, 해당 참고 자료는 생략하세요.
+7. 모든 응답은 한국어로만 작성하세요. 영어 용어(예: 'effects', 'scientific basis' 등)를 사용하지 마세요.
+8. 논문 제목이나 출처 정보에서 영어 부분은 제거하거나 한국어로 간략하게 요약하세요.
 
 응답 형식:
 [분석]
@@ -52,8 +55,150 @@ JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를
 - 주의사항: (스트레칭 시 주의할 점)
 
 [참고 자료]
-- (사용된 학술 자료 및 출처 URL)"""
+- (실제 URL이 있는 학술 자료만 포함, URL이 없는 경우 생략)"""
     
+    @classmethod
+    def _get_conversation_prompt(cls, conversation_context: Dict[str, Any], relevant_exercises: List[Dict[str, Any]]) -> str:
+        """대화 컨텍스트 기반 프롬프트 생성"""
+        # 사용자 정보 추출
+        user_info = conversation_context.get("user_info", {})
+        age = user_info.get("age", "알 수 없음")
+        gender = user_info.get("gender", "알 수 없음")
+        lifestyle = user_info.get("lifestyle", "알 수 없음")
+        occupation = user_info.get("occupation", "알 수 없음")
+        selected_body_parts = user_info.get("selected_body_parts", "알 수 없음")
+        
+        # 초기 질문과 응답
+        initial_question = conversation_context.get("initial_question", "")
+        initial_response = conversation_context.get("initial_response", "")
+        follow_up_question = conversation_context.get("follow_up_question", "")
+        
+        # 관련 스트레칭 정보 포맷팅
+        exercises_text = ""
+        for i, exercise in enumerate(relevant_exercises, 1):
+            exercises_text += f"\n[스트레칭 {i}]\n"
+            exercises_text += f"이름: {exercise.get('name', '알 수 없음')}\n"
+            exercises_text += f"설명: {exercise.get('description', '알 수 없음')}\n"
+            exercises_text += f"방법: {exercise.get('method', '알 수 없음')}\n"
+            exercises_text += f"효과: {exercise.get('effect', '알 수 없음')}\n"
+            exercises_text += f"주의사항: {exercise.get('caution', '알 수 없음')}\n"
+        
+        # 프롬프트 생성
+        prompt = f"""당신은 꾸부기라는 이름의 스트레칭 전문가입니다. 친절하고 명확하게 스트레칭 정보를 제공합니다.
+
+사용자 정보:
+- 나이: {age}
+- 성별: {gender}
+- 생활 습관: {lifestyle}
+- 직업: {occupation}
+- 통증 부위: {selected_body_parts}
+
+이전 대화 내용:
+[사용자 질문]
+{initial_question}
+
+[꾸부기 응답]
+{initial_response}
+
+관련 스트레칭 정보:{exercises_text}
+
+현재 사용자의 후속 질문:
+{follow_up_question}
+
+위 정보를 바탕으로 사용자의 후속 질문에 답변해주세요. 
+항상 안전을 최우선으로 고려하고, 사용자에게 적합한 스트레칭 방법을 설명하세요.
+이전 응답에서 언급한 내용을 기반으로 하되, 필요하다면 새로운 정보나 더 자세한 설명을 제공하세요.
+꾸부기의 말투와 스타일을 유지하며, 친근하고 전문적인 어조로 답변하세요.
+모든 응답은 한국어로만 작성하세요. 영어 용어(예: 'effects', 'scientific basis' 등)를 사용하지 마세요.
+논문 제목이나 출처 정보에서 영어 부분은 제거하거나 한국어로 간략하게 요약하세요.
+"""
+        return prompt
+
+    @classmethod
+    async def generate_conversation_response_stream(
+        cls, 
+        session_id: str,
+        conversation_context: Dict[str, Any],
+        relevant_exercises: List[Dict[str, Any]] = None
+    ) -> AsyncGenerator[StreamingAIResponse, None]:
+        """대화 컨텍스트 기반 스트리밍 응답 생성"""
+        try:
+            # 프롬프트 생성
+            prompt = cls._get_conversation_prompt(conversation_context, relevant_exercises)
+            
+            # OpenAI API 요청 준비
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {cls.API_KEY}"
+            }
+            
+            # 요청 데이터
+            request_data = {
+                "model": "gpt-4-turbo",  # 또는 적절한 모델
+                "messages": [
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": conversation_context.get("follow_up_question", "")}
+                ],
+                "stream": True,
+                "temperature": 0.7,
+                "max_tokens": cls.MAX_TOKENS
+            }
+            
+            # 세마포어를 사용하여 동시 요청 제한
+            async with cls._semaphore:
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    async with client.stream(
+                        "POST",
+                        f"{cls.API_URL}/v1/chat/completions",
+                        headers=headers,
+                        json=request_data,
+                        timeout=60.0
+                    ) as response:
+                        if response.status_code != 200:
+                            error_text = await response.text()
+                            logger.error(f"OpenAI API error: {response.status_code}, {error_text}")
+                            raise HTTPException(
+                                status_code=response.status_code,
+                                detail=f"OpenAI API error: {error_text}"
+                            )
+                        
+                        # 응답 스트리밍 처리
+                        buffer = ""
+                        async for chunk in response.aiter_bytes():
+                            buffer += chunk.decode("utf-8")
+                            
+                            # 완전한 SSE 메시지 찾기
+                            while "\n\n" in buffer:
+                                message, buffer = buffer.split("\n\n", 1)
+                                
+                                if message.startswith("data: "):
+                                    data = message[6:]  # "data: " 제거
+                                    
+                                    # "[DONE]" 메시지 처리
+                                    if data == "[DONE]":
+                                        break
+                                    
+                                    try:
+                                        json_data = json.loads(data)
+                                        
+                                        # 청크에서 텍스트 추출
+                                        if "choices" in json_data and len(json_data["choices"]) > 0:
+                                            choice = json_data["choices"][0]
+                                            if "delta" in choice and "content" in choice["delta"]:
+                                                content = choice["delta"]["content"]
+                                                
+                                                # 응답 객체 생성 및 반환
+                                                response_chunk = StreamingAIResponse(content=content)
+                                                yield response_chunk
+                                    except json.JSONDecodeError:
+                                        logger.warning(f"Failed to parse JSON: {data}")
+                                        continue
+        
+        except Exception as e:
+            logger.error(f"Error in OpenAI streaming: {e}")
+            # 오류 발생 시 오류 메시지 반환
+            yield StreamingAIResponse(content=f"죄송합니다, 응답 생성 중 오류가 발생했습니다: {str(e)}")
+
     @classmethod
     async def generate_stretching_guide_stream(
         cls, 

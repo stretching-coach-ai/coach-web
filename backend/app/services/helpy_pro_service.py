@@ -57,7 +57,6 @@ class HelpyProService:
             "pain_description": user_input.pain_description,
             "body_parts": user_input.selected_body_parts,
             "occupation": user_input.occupation,
-            "pain_level": getattr(user_input, "pain_level", 5),
             "age": getattr(user_input, "age", ""),
             "gender": getattr(user_input, "gender", "")
         }
@@ -87,12 +86,17 @@ class HelpyProService:
                 muscle = item["muscle"]
                 similarity = item.get("similarity", 0)
                 
+                # URL 정보 추출
+                source_url = ""
+                if exercise.get("evidence") and exercise["evidence"].get("url"):
+                    source_url = exercise["evidence"]["url"]
+                
                 # 기본 정보
                 exercise_info = {
                     "title": exercise.get("title", "정보 없음"),
                     "muscle": muscle,
                     "similarity": f"{similarity:.2f}",
-                    "source_url": exercise.get("source_url", ""),
+                    "source_url": source_url,
                     "steps": []
                 }
                 
@@ -155,7 +159,7 @@ class HelpyProService:
                     "필요한 경우 Google 검색 기능을 사용하여 추가 정보를 찾으세요.",
                     "사용자의 상태, 직업, 생활 습관을 고려한 맞춤형 가이드를 제공하세요.",
                     "각 스트레칭 동작에 대해 단계별 지침, 호흡법, 반복 횟수를 명확히 설명하세요.",
-                    "참고 자료 섹션에 사용된 학술 자료나 스트레칭 정보의 출처 URL을 포함하세요."
+                    "참고 자료 섹션에는 실제 URL이 있는 경우에만 포함하세요. URL이 없는 경우 출처 링크 필요와 같은 텍스트를 사용하지 말고, 해당 참고 자료는 생략하세요."
                 ]
             }
         }
@@ -327,8 +331,10 @@ JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를
 2. 학술적 근거가 있는 경우 반드시 포함하고 출처를 명시하세요.
 3. 사용자의 상태, 직업, 생활 습관을 고려한 맞춤형 가이드를 제공하세요.
 4. 각 스트레칭 동작에 대해 단계별 지침, 호흡법, 반복 횟수를 명확히 설명하세요.
-5. 필요한 경우 Google 검색 기능을 사용하여 추가 정보를 찾으세요.
-6. 참고 자료 섹션에 사용된 학술 자료나 스트레칭 정보의 출처 URL을 포함하세요.
+5. 필요한 경우 Google 검색 기능을 사용하여 추가 정보를 찾으세요
+6. 참고 자료 섹션에는 실제 URL이 있는 경우에만 포함하세요. URL이 없는 경우 "[출처 링크 필요]"와 같은 텍스트를 사용하지 말고, 해당 참고 자료는 생략하세요.
+7. 모든 응답은 한국어로만 작성하세요. 영어 용어(예: 'effects', 'scientific basis' 등)를 사용하지 마세요.
+8. 논문 제목이나 출처 정보에서 영어 부분은 제거하거나 한국어로 간략하게 요약하세요.
 
 응답 형식:
 [분석]
@@ -342,7 +348,7 @@ JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를
 - 주의사항: (스트레칭 시 주의할 점)
 
 [참고 자료]
-- (사용된 학술 자료 및 출처 URL)"""
+- (실제 URL이 있는 학술 자료만 포함, URL이 없는 경우 생략)"""
                 },
                 {
                     "role": "user",
@@ -390,9 +396,9 @@ JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를
                 "accept": "application/json",
                 "content-type": "application/json",
                 "authorization": f"Bearer {cls.API_KEY}",
-                "Cache-Control": "no-cache, no-store, must-revalidate",  # 캐시 방지 헤더 추가
-                "Pragma": "no-cache",  # 캐시 방지 헤더 추가
-                "Expires": "0"  # 캐시 방지 헤더 추가
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",  
+                "Expires": "0" 
             }
             
             # API 키 로깅 (마스킹 처리)
@@ -411,7 +417,7 @@ JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를
                 try:
                     # 명시적 타임아웃 설정 (45초)
                     response = await client.post(
-                        f"{cls.API_URL}/v1/chat/completions?cache_buster={cache_buster}",  # URL에 캐시 방지 파라미터 추가
+                        f"{cls.API_URL}/v1/chat/completions?cache_buster={cache_buster}", 
                         json=request_data,
                         headers=api_headers,
                         timeout=45.0
@@ -563,7 +569,9 @@ JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를
 3. 사용자의 상태, 직업, 생활 습관을 고려한 맞춤형 가이드를 제공하세요.
 4. 각 스트레칭 동작에 대해 단계별 지침, 호흡법, 반복 횟수를 명확히 설명하세요.
 5. 필요한 경우 Google 검색 기능을 사용하여 추가 정보를 찾으세요.
-6. 참고 자료 섹션에 사용된 학술 자료나 스트레칭 정보의 출처 URL을 포함하세요.
+6. 참고 자료 섹션에는 실제 URL이 있는 경우에만 포함하세요. URL이 없는 경우 출처 링크 필요와 같은 텍스트를 사용하지 말고, 해당 참고 자료는 생략하세요.
+7. 모든 응답은 한국어로만 작성하세요. 영어 용어(예: 'effects', 'scientific basis' 등)를 사용하지 마세요.
+8. 논문 제목이나 출처 정보에서 영어 부분은 제거하거나 한국어로 간략하게 요약하세요.
 
 응답 형식:
 [분석]
@@ -577,7 +585,7 @@ JSON 형식으로 제공된 사용자 데이터와 관련 스트레칭 정보를
 - 주의사항: (스트레칭 시 주의할 점)
 
 [참고 자료]
-- (사용된 학술 자료 및 출처 URL)"""
+- (실제 URL이 있는 학술 자료만 포함, URL이 없는 경우 생략)"""
                         },
                         {
                             "role": "user",

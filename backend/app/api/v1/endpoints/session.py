@@ -18,6 +18,8 @@ import re
 from typing import Optional
 from datetime import datetime
 from app.models.ai_request import AIRequestDB
+from app.schemas.conversation import ConversationRequest
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -950,3 +952,103 @@ async def get_recent_activities(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error getting recent activities: {str(e)}"
         )
+
+@router.post("/sessions/{session_id}/conversation/stream")
+async def stream_conversation(
+    session_id: str,
+    request: ConversationRequest,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """대화 컨텍스트 기반 스트리밍 응답 생성"""
+    try:
+        logger.info(f"Processing conversation request for session_id: {session_id}")
+        
+        # 세션 조회
+        session = await TempSessionService.get_session(session_id)
+        if not session:
+            logger.error(f"Session not found: {session_id}")
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # 세션에서 최신 스트레칭 데이터 가져오기
+        if not session.stretching_sessions or len(session.stretching_sessions) == 0:
+            logger.error(f"No stretching sessions found for session_id: {session_id}")
+            raise HTTPException(
+                status_code=400, 
+                detail="No stretching data available. Please create a stretching session first."
+            )
+        
+        latest_stretching = session.stretching_sessions[-1]
+        
+        # 사용자 입력 및 AI 응답 가져오기
+        user_input = latest_stretching.user_input
+        ai_response = latest_stretching.ai_response
+        
+        # 임베딩 서비스 초기화 확인
+        await EmbeddingService.initialize()
+        
+        # 관련 스트레칭 데이터 가져오기
+        body_parts = [part.strip() for part in user_input.selected_body_parts.split(',')]
+        relevant_exercises = await EmbeddingService.search(
+            query=user_input.pain_description,
+            body_parts=body_parts,
+            occupation=user_input.occupation,
+            top_k=3
+        )
+        
+        logger.info(f"Found {len(relevant_exercises)} relevant exercises for conversation context")
+        
+        # SSE 형식으로 변환하는 내부 함수 정의
+        async def format_as_sse():
+            try:
+                logger.info("Starting OpenAI SSE stream for conversation")
+                
+                # 대화 컨텍스트 생성
+                conversation_context = {
+                    "initial_question": user_input.pain_description,
+                    "initial_response": ai_response,
+                    "follow_up_question": request.question,
+                    "user_info": {
+                        "age": user_input.age,
+                        "gender": user_input.gender,
+                        "lifestyle": user_input.lifestyle,
+                        "occupation": user_input.occupation,
+                        "selected_body_parts": user_input.selected_body_parts,
+                    }
+                }
+                
+                # OpenAI 스트리밍 서비스 호출
+                async for chunk in OpenAIStreamingService.generate_conversation_response_stream(
+                    session_id=session_id,
+                    conversation_context=conversation_context,
+                    relevant_exercises=relevant_exercises
+                ):
+                    # 응답 데이터를 SSE 형식으로 변환
+                    data = json.dumps({"content": chunk.content})
+                    yield f"data: {data}\n\n"
+                    
+                # 완료 신호 전송
+                yield f"data: {json.dumps({'done': True})}\n\n"
+                
+                # 대화 기록 저장 (비동기로 처리)
+                asyncio.create_task(
+                    TempSessionService.add_conversation_history(
+                        session_id=session_id,
+                        question=request.question,
+                        response="[스트리밍 응답]"  # 실제 전체 응답은 저장하지 않음
+                    )
+                )
+                
+            except Exception as e:
+                logger.error(f"Error in conversation streaming: {e}")
+                error_data = json.dumps({"error": str(e)})
+                yield f"data: {error_data}\n\n"
+        
+        # 스트리밍 응답 반환
+        return StreamingResponse(
+            format_as_sse(),
+            media_type="text/event-stream"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error processing conversation request: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
