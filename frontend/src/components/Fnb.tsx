@@ -19,7 +19,7 @@ export const Fnb = () => {
             style={{ width: 'calc(100% / 4.5)' }}
           >
             <Home10Icon
-              className={`w-6 h-6 sm:w-8 sm:h-8 ${pathname === '/' ? 'text-[#6B925C]' : 'text-black'}`}
+              className={`w-6 h-6 sm:w-8 sm:h-8 ${pathname === '/main' ? 'text-[#6B925C]' : 'text-black'}`}
             />
             <p className="mt-[2px]">메인</p>
           </Link>
