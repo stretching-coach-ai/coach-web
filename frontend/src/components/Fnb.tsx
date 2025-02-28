@@ -10,8 +10,8 @@ import { AiChat02Icon } from 'hugeicons-react';
 export const Fnb = () => {
   const pathname = usePathname();
   return (
-    <footer className="w-full h-[63px] fixed bottom-0 left-0 right-0 z-40">
-      <div className="w-full h-16 fixed bottom-0 left-0 right-0 bg-[#F9FFEB] rounded-t-[14px]">
+    <footer className="max-w-md w-full h-[63px] fixed bottom-0 left-0 right-0 z-40 m-auto">
+      <div className="max-w-md w-full h-16 fixed bottom-0 bg-[#F9FFEB] rounded-t-[14px]">
         <div className="flex justify-between px-[5%] sm:px-[43px] pt-[12px] max-w-[390px] mx-auto">
           <Link
             href="/"
@@ -29,7 +29,7 @@ export const Fnb = () => {
             style={{ width: 'calc(100% / 4.5)' }}
           >
             <AiChat02Icon
-              className={`w-6 h-6 sm:w-8 sm:h-8 ${pathname === '/onboarding' ? 'text-[#6B925C]' : 'text-black'}`}
+              className={`w-6 h-6 sm:w-8 sm:h-8 ${pathname === '/onboarding' || '/chatting' ? 'text-[#6B925C]' : 'text-black'}`}
             />
             <p className="mt-[2px]">채팅</p>
           </Link>
