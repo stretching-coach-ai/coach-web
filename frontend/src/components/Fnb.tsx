@@ -16,7 +16,7 @@ export const Fnb = () => {
           <Link
             href="/"
             className="flex flex-col text-[10px] font-medium text-[#6B925C] justify-center items-center"
-            style={{ width: 'calc(100% / 4.5)' }}
+            style={{ width: 'calc(100% / 4)' }}
           >
             <Home10Icon
               className={`w-6 h-6 sm:w-8 sm:h-8 ${pathname === '/' ? 'text-[#6B925C]' : 'text-black'}`}
@@ -24,19 +24,19 @@ export const Fnb = () => {
             <p className="mt-[2px]">메인</p>
           </Link>
           <Link
-            href="/onboarding"
+            href="/kkubugi"
             className="flex flex-col text-[10px] font-medium text-[#6B925C] justify-center items-center"
-            style={{ width: 'calc(100% / 4.5)' }}
+            style={{ width: 'calc(100% / 4)' }}
           >
             <AiChat02Icon
-              className={`w-6 h-6 sm:w-8 sm:h-8 ${pathname === '/onboarding' || '/chatting' ? 'text-[#6B925C]' : 'text-black'}`}
+              className={`w-6 h-6 sm:w-8 sm:h-8 ${pathname === '/kkubugi' ? 'text-[#6B925C]' : 'text-black'}`}
             />
-            <p className="mt-[2px]">채팅</p>
+            <p className="mt-[2px]">꾸부기</p>
           </Link>
           <Link
             href="/history"
             className="flex flex-col text-[10px] font-medium text-[#6B925C] justify-center items-center"
-            style={{ width: 'calc(100% / 4.5)' }}
+            style={{ width: 'calc(100% / 4)' }}
           >
             <ChartIcon
               className={`w-6 h-6 sm:w-8 sm:h-8 ${pathname === '/history' ? 'text-[#6B925C]' : 'text-black'}`}
@@ -46,7 +46,7 @@ export const Fnb = () => {
           <Link
             href="/more"
             className="flex flex-col text-[10px] font-medium text-[#6B925C] justify-center items-center"
-            style={{ width: 'calc(100% / 4.5)' }}
+            style={{ width: 'calc(100% / 4)' }}
           >
             <MoreHorizontalCircle01Icon
               className={`w-6 h-6 sm:w-8 sm:h-8 ${pathname === '/more' ? 'text-[#6B925C]' : 'text-black'}`}

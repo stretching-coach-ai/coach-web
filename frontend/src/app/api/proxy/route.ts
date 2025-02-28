@@ -23,6 +23,9 @@ export async function POST(request: NextRequest) {
     const cookies = request.cookies;
     const sessionIdCookie = cookies.get('session_id');
     
+    console.log('프록시 API 쿠키:', cookies.getAll());
+    console.log('세션 ID 쿠키:', sessionIdCookie);
+    
     // 요청 옵션 구성
     const options: RequestInit = {
       method,
@@ -42,7 +45,22 @@ export async function POST(request: NextRequest) {
     
     // 백엔드 API 호출
     const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
-    const responseData = await response.json();
+    
+    // 응답 상태 로깅
+    console.log('백엔드 응답 상태:', response.status, response.statusText);
+    
+    let responseData;
+    try {
+      responseData = await response.json();
+    } catch (error) {
+      console.error('응답 파싱 오류:', error);
+      responseData = { error: '응답 파싱 오류' };
+    }
+    
+    // 스트레칭 API 응답인 경우 로깅
+    if (endpoint.includes('/stretching')) {
+      console.log('스트레칭 API 응답 데이터:', JSON.stringify(responseData, null, 2));
+    }
 
     // 응답 반환
     return NextResponse.json(responseData, { 

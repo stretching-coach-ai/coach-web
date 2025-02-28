@@ -158,16 +158,74 @@ export default function ChatUI() {
       }
 
       const data = await response.json();
-      console.log('스트레칭 API 응답 데이터:', data);
+      
+      // 비회원 사용자인 경우 회원가입 유도 알림 표시
+      const isLoggedIn = await checkUserLoggedIn();
+      if (!isLoggedIn) {
+        setTimeout(() => {
+          // 회원가입 유도 알림 표시
+          const signupPromptEvent = new CustomEvent('botMessage', {
+            detail: {
+              id: Date.now() + 100,
+              text: '회원가입하시면 스트레칭 기록을 저장하고 더 많은 기능을 이용하실 수 있습니다. 지금 가입하시겠습니까?',
+              sender: 'bot',
+              isSignupPrompt: true
+            },
+          });
+          window.dispatchEvent(signupPromptEvent);
+        }, 2000); // 2초 후에 회원가입 유도 메시지 표시
+      }
+
       return data;
     },
     onSuccess: (data) => {
       console.log('메시지 전송 성공:', data);
+      console.log('응답 데이터 타입:', typeof data);
+      console.log('응답 데이터 구조:', Object.keys(data));
+      
+      // 응답 데이터에서 텍스트 추출 (객체인 경우 JSON 문자열로 변환)
+      let responseText = '';
+      if (typeof data === 'object' && data !== null) {
+        console.log('객체 데이터 상세 내용:', JSON.stringify(data, null, 2));
+        
+        // 특정 필드 확인 (stretching_guide 필드를 우선 확인)
+        if (data.stretching_guide) {
+          console.log('stretching_guide 필드 발견:', data.stretching_guide);
+          responseText = data.stretching_guide;
+        } else if (data.text) {
+          console.log('text 필드 발견:', data.text);
+          responseText = data.text;
+        } else if (data.content) {
+          console.log('content 필드 발견:', data.content);
+          responseText = data.content;
+        } else if (data.message) {
+          console.log('message 필드 발견:', data.message);
+          responseText = data.message;
+        } else {
+          // 객체를 문자열로 변환하여 표시
+          try {
+            console.log('알려진 필드 없음, 전체 객체를 문자열로 변환');
+            responseText = JSON.stringify(data, null, 2);
+          } catch (e) {
+            console.error('객체 변환 오류:', e);
+            responseText = '응답 데이터를 표시할 수 없습니다.';
+          }
+        }
+      } else if (typeof data === 'string') {
+        console.log('문자열 데이터:', data.substring(0, 100) + (data.length > 100 ? '...' : ''));
+        responseText = data;
+      } else {
+        console.log('지원되지 않는 데이터 타입:', typeof data);
+        responseText = '응답을 받지 못했습니다.';
+      }
+      
+      console.log('최종 응답 텍스트:', responseText.substring(0, 100) + (responseText.length > 100 ? '...' : ''));
+      
       // 봇 응답 메시지 이벤트 발생
       const botMessageEvent = new CustomEvent('botMessage', {
         detail: {
           id: Date.now(),
-          text: data.text || '응답을 받지 못했습니다.',
+          text: data, // 전체 데이터 객체를 그대로 전달
           sender: 'bot',
         },
       });
@@ -241,6 +299,29 @@ export default function ChatUI() {
     
     // API 요청
     sendMessageMutation.mutate(message);
+  };
+
+  // 사용자 로그인 상태 확인 함수 추가
+  const checkUserLoggedIn = async () => {
+    try {
+      const response = await fetch('/api/v1/auth/me', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.is_authenticated && data.user;
+      }
+      return false;
+    } catch (error) {
+      console.error('로그인 상태 확인 중 오류:', error);
+      return false;
+    }
   };
 
   return (

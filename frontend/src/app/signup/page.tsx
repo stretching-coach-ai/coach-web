@@ -91,7 +91,32 @@ const signup = () => {
       }
 
       console.log('회원가입 성공:', result);
-      router.push('/auth/login');
+      
+      // 회원가입 후 자동 로그인 처리
+      try {
+        console.log('자동 로그인 시도 중...');
+        const loginResponse = await fetch(
+          `${apiUrl}/api/v1/auth/login`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ email, password }),
+          },
+        );
+        
+        if (loginResponse.ok) {
+          console.log('자동 로그인 성공');
+          // 메인 페이지로 리다이렉트
+          router.push('/main');
+        } else {
+          console.log('자동 로그인 실패, 로그인 페이지로 이동');
+          router.push('/auth/login');
+        }
+      } catch (loginError) {
+        console.error('자동 로그인 오류:', loginError);
+        router.push('/auth/login');
+      }
     } catch (error) {
       console.error('오류 발생:', error);
       toggleVisibillity(errorRef, true);

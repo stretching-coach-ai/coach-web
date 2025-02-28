@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { Stardust } from '../app/fonts';
 import { LoadingSpinner } from './LoadingSpinner';
+import Image from 'next/image';
+import { User } from 'lucide-react';
 
 interface Message {
   id: number;
-  text: string;
+  text: string | any;
   sender: 'user' | 'bot';
+  isSignupPrompt?: boolean;
 }
 
 interface ChatInterfaceProps {
@@ -38,18 +41,11 @@ export const ChatInterface = ({
   useEffect(() => {
     if (!initializedRef.current && initialMessages.length > 0) {
       console.log('초기 메시지 설정 (props):', initialMessages);
-      // 중복 메시지 방지를 위해 기존 메시지와 비교
-      const uniqueMessages = initialMessages.filter(
-        (newMsg) => !messages.some((existingMsg) => existingMsg.id === newMsg.id)
-      );
-      
-      if (uniqueMessages.length > 0) {
-        setMessages((prev) => [...prev, ...uniqueMessages]);
-      }
-      
+      // 중복 메시지 방지를 위해 기존 메시지와 비교하지 않고 한 번만 설정
+      setMessages(initialMessages);
       initializedRef.current = true;
     }
-  }, [initialMessages, messages]);
+  }, [initialMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -63,8 +59,6 @@ export const ChatInterface = ({
       
       // 중복 메시지 방지
       setMessages((prev) => {
-        console.log('이전 메시지 목록:', prev);
-        
         // 이미 같은 ID의 메시지가 있는지 확인
         const isDuplicate = prev.some(msg => msg.id === botMessage.id);
         if (isDuplicate) {
@@ -72,9 +66,7 @@ export const ChatInterface = ({
           return prev;
         }
         
-        const newMessages = [...prev, botMessage];
-        console.log('새 메시지 목록:', newMessages);
-        return newMessages;
+        return [...prev, botMessage];
       });
     };
 
@@ -233,7 +225,48 @@ export const ChatInterface = ({
   };
 
   // URL을 감지하여 링크로 변환하는 함수
-  const formatText = (text: string) => {
+  const formatText = (text: string | any): { __html: string } => {
+    // 디버깅 로그 추가
+    console.log('formatText 입력값:', text);
+    console.log('formatText 입력 타입:', typeof text);
+    
+    // 객체인 경우 문자열로 변환
+    if (typeof text === 'object' && text !== null) {
+      try {
+        // 객체 내용 로깅
+        console.log('객체 내용:', JSON.stringify(text, null, 2));
+        
+        // 객체에 특정 필드가 있는지 확인 (우선순위: ai_response > stretching_guide > text > content > message)
+        if (text.ai_response) {
+          text = text.ai_response;
+        } else if (text.stretching_guide) {
+          text = text.stretching_guide;
+        } else if (text.text) {
+          text = text.text;
+        } else if (text.content) {
+          text = text.content;
+        } else if (text.message) {
+          text = text.message;
+        } else {
+          // 알려진 필드가 없으면 전체 객체를 문자열로 변환
+          text = JSON.stringify(text, null, 2);
+        }
+        console.log('객체를 문자열로 변환:', text);
+      } catch (e) {
+        console.error('객체 변환 오류:', e);
+        text = '[객체를 표시할 수 없습니다]';
+      }
+    } else if (text === undefined || text === null) {
+      text = '';
+    } else if (typeof text !== 'string') {
+      // 문자열이 아닌 경우 문자열로 변환
+      text = String(text);
+    }
+    
+    // 이제 text는 확실히 문자열입니다
+    const textStr = text as string;
+    console.log('최종 변환된 텍스트:', textStr.substring(0, 100) + (textStr.length > 100 ? '...' : ''));
+    
     // 섹션 제목 형식 (예: [분석], [가이드], [참고 자료])
     const sectionPattern = /\[(.*?)\]/g;
     
@@ -244,7 +277,7 @@ export const ChatInterface = ({
     const urlPattern = /(https?:\/\/[^\s,)"'<>]+)/g;
     
     // URL 정규화 함수 - URL 끝에 있는 특수문자 제거
-    const normalizeUrl = (url: string) => {
+    const normalizeUrl = (url: string): string => {
       // URL 끝에 있는 특수문자 제거 (마침표, 쉼표, 괄호 등)
       let cleanUrl = url.replace(/[.,;:!?)"'\]>]+$/, '');
       // URL에 포함된 공백 제거
@@ -253,86 +286,52 @@ export const ChatInterface = ({
     };
     
     // 참고 자료 섹션 찾기
-    const sections = text.split(/\[(.*?)\]/g).filter(Boolean);
-    let enhancedText = text;
+    const referenceSection = textStr.includes('[참고 자료]') ? 
+      textStr.split('[참고 자료]')[1] : '';
     
-    // 참고 자료 섹션 특별 처리
-    for (let i = 0; i < sections.length; i++) {
-      if (sections[i].trim() === '참고 자료' || sections[i].trim() === 'References') {
-        // 다음 섹션이 있으면 (참고 자료 섹션의 내용)
-        if (i + 1 < sections.length) {
-          const refContent = sections[i + 1];
-          
-          // 참고 자료 섹션 내용에서 URL만 추출하여 간결하게 표시
-          let enhancedRefContent = '';
-          let hasLinks = false;
-          
-          // 마크다운 링크 추출
-          const markdownLinks = [...refContent.matchAll(markdownLinkPattern)];
-          markdownLinks.forEach(match => {
-            hasLinks = true;
-            const normalizedUrl = normalizeUrl(match[2]);
-            enhancedRefContent += `<div class="my-2 p-2 bg-blue-50 rounded"><a href="${normalizedUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 font-medium underline">관련 문서</a></div>`;
-          });
-          
-          // 일반 URL 추출
-          if (!hasLinks) {
-            const urlMatches = [...refContent.matchAll(urlPattern)];
-            urlMatches.forEach(match => {
-              hasLinks = true;
-              const normalizedUrl = normalizeUrl(match[0]);
-              enhancedRefContent += `<div class="my-2 p-2 bg-blue-50 rounded"><a href="${normalizedUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 font-medium underline">관련 문서</a></div>`;
-            });
-          }
-          
-          // URL이 없는 경우 각 줄에서 URL 패턴 확인
-          if (!hasLinks) {
-            const lines = refContent.trim().split('\n');
-            lines.forEach(line => {
-              const urlMatch = line.match(urlPattern);
-              if (urlMatch) {
-                const normalizedUrl = normalizeUrl(urlMatch[0]);
-                enhancedRefContent += `<div class="my-2 p-2 bg-blue-50 rounded"><a href="${normalizedUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 font-medium underline">관련 문서</a></div>`;
-              }
-              // URL이 없는 경우 아무것도 표시하지 않음 (원본 논문 데이터 출력 안함)
-            });
-          }
-          
-          // 원본 텍스트에서 참고 자료 섹션 내용 교체
-          if (enhancedRefContent) {
-            enhancedText = enhancedText.replace(refContent, enhancedRefContent);
-          } else {
-            // URL이 없는 경우 참고 자료 섹션 내용을 빈 문자열로 대체
-            enhancedText = enhancedText.replace(refContent, '');
-          }
-        }
-        break;
-      }
+    // 참고 자료가 있으면 별도 처리
+    if (referenceSection) {
+      // 참고 자료 섹션 제외한 본문
+      const mainContent = textStr.split('[참고 자료]')[0];
+      
+      // 본문에서 마크다운 링크 변환
+      let processedMainContent = mainContent.replace(
+        /\[(.*?)\]\((https?:\/\/[^\s]+)\)/g, 
+        '<a href="$2" target="_blank" class="text-blue-500 underline">$1</a>'
+      );
+      
+      // 참고 자료 섹션의 마크다운 링크 변환
+      const processedReferences = referenceSection.replace(
+        /- \[(.*?)\]\((https?:\/\/[^\s]+)\)/g, 
+        '- <a href="$2" target="_blank" class="block py-1 text-blue-500 underline">$1</a>'
+      );
+      
+      // 줄바꿈 처리
+      processedMainContent = processedMainContent.replace(/\n/g, '<br>');
+      
+      // 볼드 텍스트 처리
+      processedMainContent = processedMainContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      
+      // 최종 텍스트 조합
+      return { __html: processedMainContent + '<h3 class="text-[#6B925C] font-bold text-lg mt-2 mb-1">[참고 자료]</h3>' + processedReferences };
     }
     
     // 줄바꿈 처리
-    let formattedText = enhancedText.split('\n').map((line, i) => {
-      // 섹션 제목 스타일링 - 참고 자료 섹션은 특별 처리
-      if (line.includes('[참고 자료]') || line.includes('[References]')) {
-        line = line.replace(sectionPattern, '<span class="font-bold text-blue-600">[$1]</span>');
-      } else {
-        line = line.replace(sectionPattern, '<span class="font-bold text-green-700">[$1]</span>');
-      }
+    let formattedText = textStr.split('\n').map((line: string, i: number) => {
+      // 섹션 제목 스타일링
+      line = line.replace(sectionPattern, '<span class="font-bold text-green-700">[$1]</span>');
       
-      // 참고 자료 섹션이 아닌 경우에만 일반 링크 처리 적용
-      if (!line.includes('class="text-blue-600 font-medium underline"')) {
-        // 마크다운 링크 변환 (예: [출처](http://example.com))
-        line = line.replace(markdownLinkPattern, (match, text, url) => {
-          const normalizedUrl = normalizeUrl(url);
-          return `<a href="${normalizedUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-500 underline break-all">${text}</a>`;
-        });
-        
-        // 일반 URL 변환 (http://로 시작하는 URL)
-        line = line.replace(urlPattern, (match) => {
-          const normalizedUrl = normalizeUrl(match);
-          return `<a href="${normalizedUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-500 underline break-all">${normalizedUrl}</a>`;
-        });
-      }
+      // 마크다운 링크 변환 (예: [출처](http://example.com))
+      line = line.replace(markdownLinkPattern, (match: string, text: string, url: string) => {
+        const normalizedUrl = normalizeUrl(url);
+        return `<a href="${normalizedUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-500 underline break-all">${text}</a>`;
+      });
+      
+      // 일반 URL 변환 (http://로 시작하는 URL)
+      line = line.replace(urlPattern, (match: string) => {
+        const normalizedUrl = normalizeUrl(match);
+        return `<a href="${normalizedUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-500 underline break-all">${normalizedUrl}</a>`;
+      });
       
       // 볼드 텍스트 처리 (**텍스트**)
       line = line.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold">$1</span>');
@@ -365,27 +364,112 @@ export const ChatInterface = ({
             <p className="text-gray-500">메시지가 없습니다.</p>
           </div>
         ) : (
-          messages.map((msg) => (
+          messages.map((message) => (
             <div
-              key={msg.id}
-              className={`flex ${msg.sender === 'user' ? 'justify-end' : ''}`}
+              key={message.id}
+              className={`flex ${
+                message.sender === 'user' ? 'justify-end' : 'justify-start'
+              } mb-4`}
             >
+              {message.sender === 'bot' && (
+                <div className="w-8 h-8 rounded-full bg-[#F9FFEB] flex items-center justify-center mr-2 flex-shrink-0">
+                  <Image
+                    src="/assets/bugi-head.png"
+                    alt="부기 캐릭터"
+                    width={24}
+                    height={24}
+                  />
+                </div>
+              )}
               <div
-                className={`p-3 ${
-                  msg.sender === 'user'
-                    ? 'bg-[#E4FFA9] self-end rounded-[15px] rounded-tr-[0px] flex justify-end text-[24px] max-w-xs w-fit'
-                    : 'bg-[#F7FFE5] self-start rounded-[15px] rounded-tl-[0px] text-[18px] max-w-[85%] w-fit shadow-sm overflow-hidden break-words'
+                className={`max-w-[80%] p-3 rounded-lg ${
+                  message.sender === 'user'
+                    ? 'bg-[#6B925C] text-white'
+                    : 'bg-[#F9FFEB] text-gray-800'
                 }`}
               >
-                {msg.sender === 'user' ? (
-                  msg.text
-                ) : (
-                  <div 
-                    dangerouslySetInnerHTML={formatText(msg.text)}
-                    className="message-content"
-                  />
-                )}
+                <div className="whitespace-pre-wrap">
+                  {(() => {
+                    // 간단한 메시지 텍스트 처리 로직
+                    let textContent = '';
+                    
+                    if (typeof message.text === 'object' && message.text !== null) {
+                      // 객체에서 stretching_guide 필드 우선 사용
+                      if (message.text.stretching_guide) {
+                        textContent = message.text.stretching_guide;
+                      } 
+                      // 다음으로 text 필드 사용
+                      else if (message.text.text) {
+                        textContent = message.text.text;
+                      } 
+                      // 다음으로 content 필드 사용
+                      else if (message.text.content) {
+                        textContent = message.text.content;
+                      } 
+                      // 다음으로 message 필드 사용
+                      else if (message.text.message) {
+                        textContent = message.text.message;
+                      } 
+                      // 알려진 필드가 없으면 JSON 문자열로 변환
+                      else {
+                        textContent = JSON.stringify(message.text, null, 2);
+                      }
+                    } else {
+                      // 문자열이거나 다른 타입인 경우 문자열로 변환
+                      textContent = String(message.text || '');
+                    }
+                    
+                    // 메시지가 사용자 메시지인 경우 단순 텍스트로 표시
+                    if (message.sender === 'user') {
+                      return <pre className="whitespace-pre-wrap font-sans">{textContent}</pre>;
+                    }
+                    
+                    // 봇 메시지인 경우 formatText 함수를 사용하여 링크 등을 처리
+                    return <div dangerouslySetInnerHTML={formatText(textContent)} />;
+                  })()}
+                  
+                  {/* 회원가입 유도 메시지인 경우 버튼 표시 */}
+                  {message.isSignupPrompt && (
+                    <div className="mt-3 flex flex-col space-y-2">
+                      <a 
+                        href="/signup" 
+                        className="bg-[#93D400] text-white px-4 py-2 rounded-md text-center hover:bg-[#7CB305] transition-colors"
+                      >
+                        회원가입하기
+                      </a>
+                      <button 
+                        className="text-gray-500 text-sm hover:underline"
+                        onClick={() => {
+                          // 다음에 하기 버튼 클릭 시 메시지 추가
+                          const declineMessage: Message = {
+                            id: Date.now(),
+                            text: '다음에 가입할게요. 지금은 계속 진행할게요.',
+                            sender: 'user',
+                          };
+                          setMessages((prev) => [...prev, declineMessage]);
+                          
+                          // 봇 응답 메시지 추가
+                          setTimeout(() => {
+                            const botResponse: Message = {
+                              id: Date.now() + 1,
+                              text: '네, 알겠습니다. 언제든지 회원가입하실 수 있어요. 계속해서 도와드릴게요!',
+                              sender: 'bot',
+                            };
+                            setMessages((prev) => [...prev, botResponse]);
+                          }, 1000);
+                        }}
+                      >
+                        다음에 할게요
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
+              {message.sender === 'user' && (
+                <div className="w-8 h-8 rounded-full bg-[#6B925C] flex items-center justify-center ml-2 flex-shrink-0">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+              )}
             </div>
           ))
         )}

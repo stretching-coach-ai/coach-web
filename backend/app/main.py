@@ -8,6 +8,7 @@ from app.api.v1.endpoints.session import router as muscles_router  # muscles 라
 from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.health_profiles import router as health_profiles_router
 from app.api.v1.endpoints.body_conditions import router as body_conditions_router
+from app.api.v1.endpoints.kkubugi import router as kkubugi_router
 from app.services.temp_session_service import TempSessionService
 from app.services.auth_service import AuthService
 from app.services.embedding_service import EmbeddingService
@@ -51,7 +52,7 @@ app = FastAPI(
 # CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3002"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -96,6 +97,13 @@ app.include_router(
     body_conditions_router,
     prefix=settings.API_V1_PREFIX,
     tags=["body_conditions"]
+)
+
+# 꾸부기 챗봇 라우터 추가
+app.include_router(
+    kkubugi_router,
+    prefix=f"{settings.API_V1_PREFIX}/kkubugi",
+    tags=["kkubugi"]
 )
 
 @app.on_event("startup")

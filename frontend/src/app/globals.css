@@ -329,3 +329,20 @@ body,
     }
   }
 }
+
+/* 스트레칭 가이드 스타일링 */
+.stretching-guide {
+  color: #333;
+  line-height: 1.5;
+}
+
+.stretching-guide a {
+  color: #3b82f6;
+  text-decoration: underline;
+  transition: color 0.2s;
+  display: inline;
+}
+
+.stretching-guide a:hover {
+  color: #2563eb;
+}

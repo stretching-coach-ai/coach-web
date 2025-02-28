@@ -1,7 +1,8 @@
 export interface Message {
   id: number;
-  text: string;
+  text: string | any;
   sender: 'user' | 'bot';
+  isSignupPrompt?: boolean;
 }
 
 export interface ChatInterfaceProps {

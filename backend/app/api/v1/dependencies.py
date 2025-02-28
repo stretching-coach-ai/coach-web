@@ -1,10 +1,11 @@
-from fastapi import Depends, Cookie, HTTPException, status
+from fastapi import Depends, Cookie, HTTPException, status, APIRouter
 from typing import Optional
 
 from app.services.auth_service import AuthService
 from app.schemas.user import UserResponse
 
 auth_service = AuthService()
+router = APIRouter()
 
 async def get_current_user(
     session_cookie: Optional[str] = Cookie(None, alias="session_id")

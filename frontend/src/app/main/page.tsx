@@ -349,18 +349,42 @@ const MainPage = () => {
     try {
       setLoadingRecent(true);
       
-      // 사용자 ID 또는 세션 ID 파라미터 설정
-      let url = '/api/v1/session/recent-activities';
-      if (user && user.id) {
-        url += `?user_id=${user.id}`;
-      } else if (sessionId) {
-        url += `?session_id=${sessionId}`;
-      }
+      // 프록시 API를 통해 최근 활동 가져오기
+      const response = await fetch('/api/proxy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          endpoint: '/api/v1/me/stretching-history',
+          method: 'GET',
+          params: {
+            limit: 3
+          }
+        })
+      });
       
-      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        setRecentStretchings(data);
+        console.log('최근 스트레칭 히스토리:', data);
+        
+        // 데이터 형식 변환
+        const formattedHistory = Array.isArray(data) ? data.map(item => ({
+          id: item.id || Math.random().toString(),
+          title: item.user_input?.pain_description || '스트레칭 세션',
+          time: new Date(item.created_at).toLocaleString('ko-KR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          duration: '10분',
+          target: item.user_input?.selected_body_parts || '전신',
+          rawData: item
+        })) : [];
+        
+        setRecentStretchings(formattedHistory);
       } else {
         console.error('최근 활동을 가져오는데 실패했습니다:', response.status);
         // 기본 데이터 설정
@@ -1151,9 +1175,12 @@ const MainPage = () => {
                           {item.duration}
                         </div>
                       </div>
-                      <button className="text-[#6B925C] hover:scale-110 transition-transform p-2 rounded-full hover:bg-[#F9FFEB]">
+                      <Link 
+                        href={`/history?id=${item.id}`} 
+                        className="text-[#6B925C] hover:scale-110 transition-transform p-2 rounded-full hover:bg-[#F9FFEB]"
+                      >
                         <PlayCircle className="w-6 h-6" />
-                      </button>
+                      </Link>
                     </div>
                   ))
                 ) : (
