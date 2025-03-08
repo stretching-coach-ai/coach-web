@@ -22,3 +22,29 @@ Thumbs.db
 *.log
 logs/
 log/
+
+# Environment variables and secrets
+.env
+.env.*
+config.json
+config.py
+secrets.json
+secrets.py
+
+# API keys and tokens
+*secret*
+*api_key*
+*apikey*
+*token*
+*credential*
+*password*
+
+# Data files
+data/raw/
+data/processed/
+data/interim/
+models/
+
+# Temporary files
+tmp/
+temp/

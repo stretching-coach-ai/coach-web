@@ -13,6 +13,8 @@ export const Header = ({ title }: Props) => {
         alt="메인 캐릭터 부기 이미지"
         width={50}
         height={40}
+        priority={true}
+        style={{ width: 'auto', height: 'auto' }}
       />
       <div
         className={`${Stardust.className} text-[24px] border-b-[2px] border-b-[#93D400]`}

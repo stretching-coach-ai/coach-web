@@ -87,23 +87,29 @@ const MorePage = () => {
   // 로그아웃 처리
   const handleLogout = async () => {
     try {
+      setLoading(true);
+      
+      // 로그아웃 API 호출
       const response = await fetch('/api/v1/auth/logout', {
         method: 'POST',
         credentials: 'include',
       });
-
-      if (response.ok) {
-        // 로컬 스토리지에서 사용자 정보 삭제
-        localStorage.removeItem('user');
-        // 로그아웃 후 메인 페이지로 이동
-        router.push('/main');
-      } else {
-        console.error('로그아웃 실패:', response.status);
-        alert('로그아웃에 실패했습니다. 다시 시도해주세요.');
-      }
+      
+      // 로컬 스토리지 인증 정보 제거
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('userInfo');
+      localStorage.removeItem('token');
+      
+      console.log('로그아웃 성공 및 로컬 데이터 제거 완료');
+      
+      // 로그아웃 후 시작 화면으로 이동
+      router.push('/select');
+      
     } catch (error) {
-      console.error('로그아웃 중 오류 발생:', error);
-      alert('로그아웃 중 오류가 발생했습니다.');
+      console.error('로그아웃 실패:', error);
+      alert('로그아웃 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setLoading(false);
     }
   };
 

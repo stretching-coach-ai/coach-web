@@ -20,11 +20,14 @@ from datetime import datetime
 from app.models.ai_request import AIRequestDB
 from app.schemas.conversation import ConversationRequest
 import asyncio
+from app.services.auth_service import AuthService
+from bson import ObjectId
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 user_service = UserService()
+auth_service = AuthService()
 
 # 영어 콘텐츠 필터링 유틸리티 함수 추가
 def is_english_content(text: str) -> bool:
@@ -65,31 +68,71 @@ def is_english_content(text: str) -> bool:
     return False
 
 @router.post("/sessions", status_code=201)
-async def create_session(response: Response):
-    """새로운 세션 생성"""
-    # UUID를 사용하여 고유한 session_id 생성
+async def create_session(
+    response: Response, 
+    session_cookie: Optional[str] = Cookie(None, alias="session_id")
+):
+    """새로운 세션 생성 - 이미 로그인된 사용자는 기존 세션 유지"""
+    logger.info(f"세션 생성 요청 - 기존 쿠키: {session_cookie}")
+    
+    # 기존 세션 쿠키가 있는지 확인
+    if session_cookie:
+        # 해당 세션이 유효한 사용자 세션인지 확인
+        user = await auth_service.validate_session(session_cookie)
+        if user:
+            logger.info(f"인증된 사용자 세션 유지: {session_cookie}, 사용자: {user.id}")
+            # 인증된 사용자면 기존 세션 유지
+            return {"session_id": session_cookie, "is_existing": True, "user_id": user.id}
+            
+        # 세션 존재 여부 확인
+        existing_session = await TempSessionService.get_session(session_cookie)
+        if existing_session:
+            logger.info(f"기존 비회원 세션 유지: {session_cookie}")
+            return {"session_id": session_cookie, "is_existing": True}
+    
+    # 신규 세션 생성
+    logger.info("새 세션 생성")
     session_id = str(uuid4())
     session = await TempSessionService.create_session(session_id)
-    # 쿠키 설정 (SameSite=Lax로 설정하여 보안 강화)
+    
+    # 쿠키 설정 (SameSite=None으로 변경하고 Secure 추가)
     response.set_cookie(
         key="session_id", 
         value=session.session_id, 
         httponly=True,
-        samesite="lax"
+        samesite="none",
+        secure=True,
+        max_age=3600 * 24 * 7  # 7일 유효기간 설정
     )
-    return {"session_id": session.session_id}
+    return {"session_id": session.session_id, "is_existing": False}
 
 @router.get("/sessions/current")
-async def get_current_session(session_cookie: Optional[str] = Cookie(None, alias="session_id")):
+async def get_current_session(session_cookie: Optional[str] = Cookie(None, alias="session_id"), request: Request = None):
     """현재 세션 정보 조회"""
-    if not session_cookie:
-        raise HTTPException(status_code=401, detail="활성화된 세션이 없습니다")
+    logger.info(f"세션 정보 조회 요청 - 쿠키: {session_cookie}")
     
-    logger.info(f"세션 쿠키 값: {session_cookie}")
+    # 쿠키가 없는 경우, 자동으로 새 세션 생성
+    if not session_cookie:
+        logger.info("세션 쿠키 없음 - 임시 세션 ID 생성")
+        temp_session_id = str(uuid4())
+        return {"session_id": temp_session_id, "is_temporary": True}
+    
+    # 인증된 사용자 세션인지 확인
+    user = await auth_service.validate_session(session_cookie)
+    if user:
+        logger.info(f"인증된 사용자 세션: {session_cookie}, 사용자: {user.id}")
+        return {"session_id": session_cookie, "is_authenticated": True, "user_id": user.id}
+    
+    # 임시 세션인지 확인
     session = await TempSessionService.get_session(session_cookie)
-    if not session:
-        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
-    return session
+    if session:
+        logger.info(f"임시 세션 확인: {session_cookie}")
+        return {"session_id": session_cookie}
+    
+    # 유효하지 않은 세션인 경우, 임시 세션 ID 반환
+    logger.info("유효하지 않은 세션 - 임시 세션 ID 생성")
+    temp_session_id = str(uuid4())
+    return {"session_id": temp_session_id, "is_temporary": True}
 
 @router.post("/sessions/{session_id}/stretching", response_model=AIResponse)
 async def create_stretching_session(
@@ -1052,3 +1095,132 @@ async def stream_conversation(
     except Exception as e:
         logger.error(f"Error processing conversation request: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/sessions/recover")
+async def recover_session(
+    response: Response,
+    request: Request,
+    session_data: dict
+):
+    """로컬 스토리지에 저장된 세션 ID를 통해 세션 복구"""
+    try:
+        logger.info(f"세션 복구 요청: {session_data}")
+        session_id = session_data.get('session_id')
+        
+        if not session_id:
+            return {"success": False, "error": "세션 ID가 제공되지 않았습니다."}
+        
+        # 세션 존재 여부 확인
+        session = await TempSessionService.get_session(session_id)
+        
+        # 인증된 사용자 세션인지 확인
+        user = await auth_service.validate_session(session_id)
+        
+        # 세션이 존재하는 경우
+        if session or user:
+            # 쿠키 설정
+            response.set_cookie(
+                key="session_id", 
+                value=session_id, 
+                httponly=True,
+                samesite="none",
+                secure=True,
+                max_age=3600 * 24 * 7  # 7일 유효기간 설정
+            )
+            logger.info(f"세션 복구 성공: {session_id}")
+            return {"success": True, "session_id": session_id, "is_user_session": bool(user)}
+        
+        # 세션이 존재하지 않는 경우, 새 세션 생성
+        logger.info(f"세션이 존재하지 않아 새 세션 생성: {session_id}")
+        new_session_id = str(uuid4())
+        session = await TempSessionService.create_session(new_session_id)
+        
+        # 쿠키 설정
+        response.set_cookie(
+            key="session_id", 
+            value=session.session_id, 
+            httponly=True,
+            samesite="none",
+            secure=True,
+            max_age=3600 * 24 * 7  # 7일 유효기간 설정
+        )
+        
+        return {"success": True, "session_id": session.session_id, "is_new": True}
+    except Exception as e:
+        logger.error(f"세션 복구 오류: {str(e)}")
+        return {"success": False, "error": str(e)}
+
+@router.post("/sessions/migrate")
+async def migrate_session(
+    request: Request,
+    session_data: dict,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """비회원 세션 데이터를 회원 계정으로 마이그레이션"""
+    try:
+        logger.info(f"세션 마이그레이션 요청: {session_data}")
+        
+        # 인증된 사용자만 사용 가능
+        if not current_user:
+            raise HTTPException(status_code=401, detail="인증이 필요합니다")
+            
+        session_id = session_data.get('session_id')
+        if not session_id:
+            return {"success": False, "error": "세션 ID가 제공되지 않았습니다."}
+            
+        # 임시 세션 확인
+        temp_session = await TempSessionService.get_session(session_id)
+        if not temp_session:
+            return {"success": False, "error": "임시 세션을 찾을 수 없습니다."}
+            
+        # 사용자 세션으로 데이터 이동
+        # 1. 스트레칭 세션 데이터 획득
+        stretching_sessions = temp_session.stretching_sessions if hasattr(temp_session, 'stretching_sessions') else []
+        
+        # 2. 사용자 DB의 stretching_history에 데이터 추가
+        user_collection = MongoManager.get_collection("users")
+        
+        # 스트레칭 기록이 있는 경우에만 진행
+        if stretching_sessions:
+            # 각 스트레칭 세션에 사용자 ID 추가
+            for session in stretching_sessions:
+                session['user_id'] = current_user.id
+                session['migrated_at'] = datetime.utcnow()
+                session['original_session_id'] = session_id
+                
+            # 사용자 문서에 스트레칭 기록 추가
+            await user_collection.update_one(
+                {"_id": ObjectId(current_user.id)},
+                {"$push": {"stretching_history": {"$each": stretching_sessions}}}
+            )
+            
+            logger.info(f"세션 마이그레이션 성공: {len(stretching_sessions)}개 스트레칭 기록이 이동됨")
+            
+        # 3. 대화 기록 마이그레이션
+        conversation_history = temp_session.conversation_history if hasattr(temp_session, 'conversation_history') else []
+        
+        if conversation_history:
+            # 각 대화 기록에 사용자 ID 추가
+            for entry in conversation_history:
+                entry['user_id'] = current_user.id
+                entry['migrated_at'] = datetime.utcnow()
+                entry['original_session_id'] = session_id
+                
+            # 사용자 문서에 대화 기록 추가
+            await user_collection.update_one(
+                {"_id": ObjectId(current_user.id)},
+                {"$push": {"conversation_history": {"$each": conversation_history}}}
+            )
+            
+            logger.info(f"대화 기록 마이그레이션 성공: {len(conversation_history)}개 대화 기록이 이동됨")
+            
+        return {
+            "success": True, 
+            "message": "세션 데이터 마이그레이션 완료",
+            "stretching_count": len(stretching_sessions),
+            "conversation_count": len(conversation_history)
+        }
+        
+    except Exception as e:
+        logger.error(f"세션 마이그레이션 오류: {str(e)}")
+        return {"success": False, "error": str(e)}

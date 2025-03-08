@@ -28,6 +28,7 @@ const MainPage = () => {
   const [loadingRecommended, setLoadingRecommended] = useState(false);
   const [loadingRecent, setLoadingRecent] = useState(false);
   const [expandedRecommendation, setExpandedRecommendation] = useState<string | null>(null);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   
   // 캐릭터 애니메이션 토글
   const toggleCharacterAnimation = () => {
@@ -147,9 +148,12 @@ const MainPage = () => {
     try {
       setLoading(true);
       
-      // 이미 로그인된 사용자인 경우 바로 onboarding으로 이동
+      // 로그인된 사용자 처리
       if (user) {
-        console.log('로그인된 사용자입니다. onboarding 페이지로 이동합니다.');
+        console.log('로그인된 사용자입니다.');
+        
+        // 로그인된 사용자는 항상 온보딩 페이지로 이동
+        console.log('온보딩 페이지로 이동합니다.');
         window.location.href = '/onboarding';
         return;
       }
@@ -349,19 +353,18 @@ const MainPage = () => {
     try {
       setLoadingRecent(true);
       
-      // 프록시 API를 통해 최근 활동 가져오기
-      const response = await fetch('/api/proxy', {
-        method: 'POST',
+      // 캐시 방지를 위한 타임스탬프 추가
+      const timestamp = new Date().getTime();
+      
+      // 직접 백엔드 API 호출하여 최근 활동 가져오기
+      const response = await fetch(`/api/v1/users/me/stretching-history?limit=5&_t=${timestamp}`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         },
-        body: JSON.stringify({
-          endpoint: '/api/v1/me/stretching-history',
-          method: 'GET',
-          params: {
-            limit: 3
-          }
-        })
+        credentials: 'include'
       });
       
       if (response.ok) {
@@ -406,10 +409,37 @@ const MainPage = () => {
   
   // 사용자 정보 또는 세션 ID가 변경될 때 최근 활동 가져오기
   useEffect(() => {
-    if (user || sessionId) {
+    if (user) {
+      console.log('사용자 정보가 있어 스트레칭 히스토리를 가져옵니다:', user);
       fetchRecentActivities();
     }
-  }, [user, sessionId]);
+  }, [user]);
+  
+  // 탭이 변경될 때 데이터 새로고침
+  useEffect(() => {
+    if (activeTab === 'history' && user) {
+      console.log('히스토리 탭이 활성화되어 스트레칭 히스토리를 새로고침합니다');
+      fetchRecentActivities();
+    }
+  }, [activeTab, user]);
+  
+  // 주기적으로 히스토리 새로고침 (30초마다)
+  useEffect(() => {
+    let refreshInterval: NodeJS.Timeout | null = null;
+    
+    if (user) {
+      refreshInterval = setInterval(() => {
+        console.log('주기적으로 스트레칭 히스토리 새로고침');
+        fetchRecentActivities();
+      }, 30000); // 30초마다 새로고침
+    }
+    
+    return () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    };
+  }, [user]);
   
   // 근육을 카테고리별로 분류 - 컴포넌트 외부로 이동하여 재사용 가능하게 함
   const muscleCategories = {
@@ -538,6 +568,53 @@ const MainPage = () => {
     setExpandedRecommendation(prev => prev === id ? null : id);
   };
   
+  // 최근 활동 강제 새로고침
+  const forceRefreshHistory = () => {
+    if (user) {
+      console.log('스트레칭 히스토리 강제 새로고침');
+      fetchRecentActivities();
+    }
+  };
+  
+  // 온보딩으로 이동하는 함수 추가
+  const goToOnboarding = () => {
+    window.location.href = '/onboarding';
+  };
+  
+  // 온보딩 완료 여부 확인 함수 추가
+  const isOnboardingCompleted = (): boolean => {
+    try {
+      const userInfoStr = localStorage.getItem('userInfo');
+      if (userInfoStr) {
+        const userInfo = JSON.parse(userInfoStr);
+        // 온보딩 완료 여부 확인 (selected_body_parts가 있거나 onboardingCompleted가 true인 경우)
+        const hasSelectedBodyParts = Array.isArray(userInfo.selected_body_parts) && userInfo.selected_body_parts.length > 0;
+        const isOnboardingCompleted = userInfo.onboardingCompleted === true;
+        
+        console.log('온보딩 상태 확인:', { 
+          hasSelectedBodyParts, 
+          isOnboardingCompleted,
+          selectedBodyParts: userInfo.selected_body_parts
+        });
+        
+        return !!(hasSelectedBodyParts || isOnboardingCompleted);
+      }
+      return false;
+    } catch (error) {
+      console.error('온보딩 상태 확인 오류:', error);
+      return false;
+    }
+  };
+
+  // 컴포넌트 마운트 시 온보딩 상태 확인
+  useEffect(() => {
+    if (user && !isOnboardingCompleted()) {
+      setNeedsOnboarding(true);
+    } else {
+      setNeedsOnboarding(false);
+    }
+  }, [user]);
+  
   return (
     <div className="pb-20 max-w-md mx-auto bg-gray-50 min-h-screen">
       <style jsx global>{`
@@ -647,7 +724,7 @@ const MainPage = () => {
                   </span>
                 ) : (
                   <>
-                    <span>{user ? '스트레칭 시작' : '시작하기'}</span>
+                    <span>{user ? '온보딩 시작하기' : '시작하기'}</span>
                     <ArrowRight className="w-4 h-4 ml-1.5" />
                   </>
                 )}
@@ -823,7 +900,7 @@ const MainPage = () => {
                       onClick={createSession}
                       className="bg-[#6B925C] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#5A7F4B] transition-colors flex items-center mx-auto"
                     >
-                      <span>첫 스트레칭 시작하기</span>
+                      <span>{user ? '온보딩 시작하기' : '시작하기'}</span>
                       <ArrowRight className="w-4 h-4 ml-1.5" />
                     </button>
                   </div>
@@ -1143,13 +1220,18 @@ const MainPage = () => {
           </div>
           
           {/* 최근 활동 */}
+          {/* 최근 활동 섹션 주석 처리
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className={`${Stardust.className} text-lg font-bold flex items-center`}>
                 <Calendar className="w-5 h-5 mr-2 text-[#6B925C]" />
                 최근 활동
               </h2>
-              <Link href="/history" className={`${Stardust.className} text-sm text-[#6B925C] flex items-center group`}>
+              <Link 
+                href="/history" 
+                className={`${Stardust.className} text-sm text-[#6B925C] flex items-center group`}
+                onClick={forceRefreshHistory}
+              >
                 전체보기 <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
@@ -1207,6 +1289,7 @@ const MainPage = () => {
               </div>
             )}
           </div>
+          */}
         </div>
         
         {/* 하단 네비게이션 */}
