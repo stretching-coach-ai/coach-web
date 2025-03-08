@@ -52,7 +52,7 @@ app = FastAPI(
 # CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3002"],  
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3002", "https://gsanymhrrjcenagj.tunnel-pt.elice.io", "https://gsanymhrrjcenagj.tunnel-pt.elice.io/proxy/3000"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

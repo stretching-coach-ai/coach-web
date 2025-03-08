@@ -14,6 +14,8 @@ export const Gnb = () => {
             alt="logo"
             width={82}
             height={51}
+            priority={true}
+            style={{ width: 'auto', height: 'auto' }}
           />
         </div>
         {isKkubugiPage && (

@@ -69,12 +69,13 @@ export const KkubugiChat: React.FC = () => {
       }]);
 
       // 백엔드 API 요청 시작
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/kkubugi/chat`, {
+      const response = await fetch('/api/v1/kkubugi/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ message: userMessage.content }),
+        credentials: 'include',
       });
 
       if (!response.ok) {

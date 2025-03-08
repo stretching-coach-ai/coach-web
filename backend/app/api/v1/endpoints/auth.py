@@ -36,8 +36,8 @@ async def register(
             value=new_session_id,
             httponly=True,
             secure=True,
-            samesite="lax",
-            max_age=3600 * 24
+            samesite="none",
+            max_age=3600 * 24 * 7
         )
         
         return user
@@ -63,8 +63,8 @@ async def login(
             value=new_session_id,
             httponly=True,
             secure=True,
-            samesite="lax",
-            max_age=3600 * 24
+            samesite="none",
+            max_age=3600 * 24 * 7
         )
         
         return AuthResponse(

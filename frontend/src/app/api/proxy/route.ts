@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       method,
       headers: {
         'Content-Type': 'application/json',
-        ...(sessionIdCookie ? { Cookie: `session_id=${sessionIdCookie.value}` } : {})
+        'Cookie': sessionIdCookie ? `session_id=${sessionIdCookie.value}` : ''
       },
       credentials: 'include',
     };
@@ -49,6 +49,15 @@ export async function POST(request: NextRequest) {
     // 응답 상태 로깅
     console.log('백엔드 응답 상태:', response.status, response.statusText);
     
+    // 응답 헤더 확인
+    const responseHeaders = Object.fromEntries(response.headers.entries());
+    console.log('백엔드 응답 헤더:', responseHeaders);
+    
+    // 쿠키 추출
+    const setCookieHeader = response.headers.get('set-cookie');
+    console.log('SET-COOKIE 헤더:', setCookieHeader);
+    
+    // 응답 본문 준비
     let responseData;
     try {
       responseData = await response.json();
@@ -61,21 +70,35 @@ export async function POST(request: NextRequest) {
     if (endpoint.includes('/stretching')) {
       console.log('스트레칭 API 응답 데이터:', JSON.stringify(responseData, null, 2));
     }
-
-    // 응답 반환
-    return NextResponse.json(responseData, { 
-      status: response.status,
-      headers: {
-        'Access-Control-Allow-Credentials': 'true',
-        'Access-Control-Allow-Origin': request.headers.get('origin') || '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    
+    // 응답 생성
+    const nextResponse = NextResponse.json(responseData);
+    
+    // 백엔드에서 설정한 쿠키를 클라이언트에 전달
+    if (setCookieHeader) {
+      // 쿠키 헤더 파싱
+      const sessionIdMatch = setCookieHeader.match(/session_id=([^;]+)/);
+      if (sessionIdMatch && sessionIdMatch[1]) {
+        console.log('세션 ID 쿠키 전달:', sessionIdMatch[1]);
+        
+        // 클라이언트에 쿠키 설정
+        nextResponse.cookies.set({
+          name: 'session_id',
+          value: sessionIdMatch[1],
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+          maxAge: 3600 * 24 * 7
+        });
       }
-    });
+    }
+    
+    return nextResponse;
+    
   } catch (error) {
     console.error('프록시 API 오류:', error);
     return NextResponse.json(
-      { error: '프록시 요청 처리 중 오류가 발생했습니다.' },
+      { error: '서버 오류', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

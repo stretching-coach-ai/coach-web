@@ -96,16 +96,12 @@ const HistoryPage = () => {
         
         console.log('스트레칭 히스토리 가져오기 시작');
         
-        // 프록시 API를 통해 히스토리 가져오기
-        const response = await fetch('/api/proxy', {
-          method: 'POST',
+        // 직접 백엔드 API 호출
+        const response = await fetch('/api/v1/users/me/stretching-history', {
+          method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            endpoint: '/api/v1/me/stretching-history',
-            method: 'GET'
-          }),
           credentials: 'include'
         });
         
@@ -178,15 +174,12 @@ const HistoryPage = () => {
     }
     
     try {
-      const response = await fetch('/api/proxy', {
-        method: 'POST',
+      const response = await fetch('/api/v1/users/me/stretching-history', {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          endpoint: `/api/v1/me/stretching-history`,
-          method: 'GET'
-        })
+        credentials: 'include'
       });
       
       if (response.ok) {

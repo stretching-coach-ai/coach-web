@@ -16,24 +16,37 @@ const select = () => {
   const handleGuestLoging = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/v1/sessions/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      console.log('비회원으로 시작하기: 로그인 상태 확인 중...');
+      
+      // 로그인 상태 확인
+      const authCheckResponse = await fetch('/api/v1/auth/me', {
+        method: 'GET',
         credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
       });
-
-      if (!response.ok) {
-        throw new Error('세션생성 실패');
+      
+      // 로그인 상태 확인 결과 처리
+      if (authCheckResponse.ok) {
+        const authData = await authCheckResponse.json();
+        console.log('인증 상태 확인 결과:', authData);
+        
+        // 이미 로그인된 사용자는 메인 페이지로 이동
+        if (authData.is_authenticated && authData.user) {
+          console.log('이미 로그인된 사용자: 메인 페이지로 리다이렉트');
+          router.push('/main');
+          return;
+        }
       }
-
-      const data = await response.json();
-      console.log('세션생성 성공:', data);
+      
+      // 비회원 사용자는 온보딩으로 직접 이동 (세션은 온보딩에서 생성)
+      console.log('비회원 사용자: 온보딩 페이지로 리다이렉트');
       router.push('/onboarding');
     } catch (error) {
-      console.error('비회원 세션 생성 중 오류 발생:', error);
-      alert('세션 생성에 실패했습니다. 다시 시도해주세요.');
+      console.error('오류 발생:', error);
+      alert('오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setLoading(false);
     }

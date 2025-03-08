@@ -6,103 +6,323 @@ import { Fnb } from '@/components/Fnb';
 import { ChatInterface } from '@/components/ChatInterface';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useMutation } from '@tanstack/react-query';
-import axios from 'axios';
 import { Message } from '@/types/chat';
-import { v4 as uuidv4 } from 'uuid';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 // API 기본 URL 설정
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+
+// fetchWithTimeout 함수 정의 - 지정된 시간 이후 타임아웃되는 fetch 함수
+const fetchWithTimeout = (url: string, options: RequestInit & { timeout?: number } = {}): Promise<Response> => {
+  const { timeout = 8000, ...fetchOptions } = options;
+  
+  return new Promise((resolve, reject) => {
+    // 타임아웃 설정
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      reject(new Error('요청 시간이 초과되었습니다.'));
+    }, timeout);
+    
+    // 실제 fetch 요청
+    fetch(url, {
+      ...fetchOptions,
+      signal: controller.signal
+    })
+      .then(response => {
+        clearTimeout(timeoutId);
+        resolve(response);
+      })
+      .catch(error => {
+        clearTimeout(timeoutId);
+        reject(error);
+      });
+  });
+};
 
 export default function ChatUI() {
   const [sessionId, setSessionId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
-  const sessionInitializedRef = useRef(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [messageCount, setMessageCount] = useState(0);
+  const router = useRouter();
+
+  // 사용자 로그인 상태 확인 함수
+  const checkUserLoggedIn = async (): Promise<boolean> => {
+    try {
+      // 로컬 스토리지에서 사용자 정보 확인
+      const userInfoStr = localStorage.getItem('userInfo');
+      if (userInfoStr) {
+        const userInfo = JSON.parse(userInfoStr);
+        console.log('사용자 정보 확인:', userInfo);
+        // 사용자 정보가 있고 isLoggedIn이 true인 경우에만 로그인 상태로 간주
+        if (userInfo.isLoggedIn === true) {
+          return true;
+        }
+      }
+      
+      // API를 통한 세션 확인 (더 정확한 방법)
+      try {
+        const response = await fetch('/api/v1/auth/me', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('API에서 사용자 인증 상태 확인:', data);
+          return data.is_authenticated === true;
+        }
+      } catch (apiError) {
+        console.error('API 인증 확인 오류:', apiError);
+      }
+      
+      // 로컬 스토리지에 사용자 정보가 없거나 API 확인이 실패하면 비로그인 상태
+      console.log('사용자 정보 없음 또는 API 확인 실패, 비로그인 상태');
+      return false;
+    } catch (error) {
+      console.error('로그인 상태 확인 오류:', error);
+      return false;
+    }
+  };
+
+  // 온보딩 완료 여부 확인 함수 추가
+  const checkOnboardingCompleted = (): boolean => {
+    try {
+      const userInfoStr = localStorage.getItem('userInfo');
+      if (userInfoStr) {
+        const userInfo = JSON.parse(userInfoStr);
+        
+        // 선택된 신체 부위 확인 (배열 또는 문자열 모두 처리)
+        const hasSelectedBodyParts = userInfo.selected_body_parts && (
+          (Array.isArray(userInfo.selected_body_parts) && userInfo.selected_body_parts.length > 0) ||
+          (typeof userInfo.selected_body_parts === 'string' && userInfo.selected_body_parts.trim() !== '')
+        );
+        
+        // 온보딩 완료 플래그 확인
+        const isCompleted = userInfo.onboardingCompleted === true;
+        
+        // 둘 중 하나라도 true면 온보딩 완료로 간주
+        return hasSelectedBodyParts || isCompleted;
+      }
+      return false;
+    } catch (error) {
+      console.error('온보딩 상태 확인 오류:', error);
+      return false;
+    }
+  };
 
   // 고유한 ID를 가진 초기 메시지 설정 - 고정된 ID 사용
   const initialMessages: Message[] = [
     { id: 1, text: '어떻게 아프냐부기?', sender: 'bot' },
   ];
 
-  // 현재 세션 정보 가져오기
+  // 세션 정보 확인
   useEffect(() => {
-    // 이미 초기화 중이거나 완료된 경우 중복 호출 방지
-    if (sessionInitializedRef.current) {
-      return;
-    }
-    
-    sessionInitializedRef.current = true;
-    
-    const fetchCurrentSession = async () => {
+    const checkSession = async () => {
       try {
         setIsInitializing(true);
         
-        // 프록시 API를 통해 현재 세션 정보 가져오기
-        console.log('세션 정보 요청 중...');
-        const response = await fetch('/api/proxy', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            endpoint: '/api/v1/sessions/current',
-            method: 'GET'
-          })
-        });
+        // 먼저 로컬 스토리지에서 세션 ID 확인
+        const localSessionId = localStorage.getItem('sessionId');
+        console.log('로컬 스토리지 세션 ID:', localSessionId);
+        
+        // 쿠키 기반 세션 ID 확인 (이미 존재하는 세션 확인)
+        try {
+          const sessionResponse = await fetch('/api/v1/sessions/current', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+          });
 
-        // 세션이 있는 경우 (로그인 또는 이전에 생성된 비회원 세션)
-        if (response.ok) {
-          const data = await response.json();
-          console.log('현재 세션 정보 조회 성공:', data);
-          
-          if (data && data.session_id) {
-            console.log('기존 세션 ID 사용:', data.session_id);
-            setSessionId(data.session_id);
-            setIsInitializing(false);
-            return;
+          // 세션이 있는 경우 (쿠키에 유효한 세션 ID가 있음)
+          if (sessionResponse.ok) {
+            const data = await sessionResponse.json();
+            
+            if (data && data.session_id) {
+              console.log('API에서 받은 세션 ID:', data.session_id);
+              setSessionId(data.session_id);
+              
+              // 로컬 스토리지에 세션 ID 저장 (백업)
+              localStorage.setItem('sessionId', data.session_id);
+              
+              // 이전 세션 ID가 있고 현재 세션 ID와 다른 경우, 이전 세션 ID로 저장
+              if (localSessionId && localSessionId !== data.session_id) {
+                console.log('이전 세션 ID 저장:', localSessionId);
+                localStorage.setItem('previousSessionId', localSessionId);
+              }
+              
+              // 로그인 상태 확인
+              const loggedIn = await checkUserLoggedIn();
+              setIsLoggedIn(loggedIn);
+            }
+          } else {
+            // API가 실패했지만 로컬 스토리지에 세션 ID가 있는 경우
+            if (localSessionId) {
+              console.log('API 오류, 로컬 스토리지의 세션 ID 사용:', localSessionId);
+              setSessionId(localSessionId);
+            } else {
+              // 온보딩 완료 여부 확인
+              const onboardingCompleted = checkOnboardingCompleted();
+              
+              if (!onboardingCompleted) {
+                console.log('온보딩이 완료되지 않았습니다. 온보딩 페이지로 이동합니다.');
+                router.push('/onboarding');
+                return;
+              }
+              
+              // 세션 ID가 없는 경우, 새 세션 생성
+              console.log('세션 ID가 없어 새 세션 생성 시도');
+              try {
+                // 로컬 스토리지에서 선택된 신체 부위 정보 가져오기
+                let selectedBodyParts = null;
+                try {
+                  const userInfoStr = localStorage.getItem('userInfo');
+                  if (userInfoStr) {
+                    const userInfo = JSON.parse(userInfoStr);
+                    selectedBodyParts = userInfo.selected_body_parts;
+                  }
+                } catch (error) {
+                  console.error('사용자 정보 파싱 오류:', error);
+                }
+                
+                // 세션 생성 요청
+                const createResponse = await fetch('/api/v1/sessions', {
+                  method: 'POST',
+                  credentials: 'include',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    body_parts: selectedBodyParts
+                  })
+                });
+                
+                if (createResponse.ok) {
+                  const createData = await createResponse.json();
+                  console.log('새 세션 생성 성공:', createData);
+                  setSessionId(createData.session_id);
+                  localStorage.setItem('sessionId', createData.session_id);
+                } else {
+                  console.error('새 세션 생성 실패:', createResponse.status);
+                  
+                  // 세션 생성 실패 시 온보딩 페이지로 이동
+                  console.log('세션 생성 실패, 온보딩 페이지로 이동합니다.');
+                  router.push('/onboarding');
+                  return;
+                }
+              } catch (createError) {
+                console.error('세션 생성 오류:', createError);
+                
+                // 오류 발생 시 온보딩 페이지로 이동
+                console.log('세션 생성 중 오류 발생, 온보딩 페이지로 이동합니다.');
+                router.push('/onboarding');
+                return;
+              }
+            }
+            
+            // 로그인 상태 확인
+            const loggedIn = await checkUserLoggedIn();
+            setIsLoggedIn(loggedIn);
           }
-        } 
-        // 세션이 없는 경우 (401) 또는 API 오류 (404 등)
-        else {
-          console.log(`세션 정보 조회 결과 (${response.status}): 새 세션 생성 필요`);
+        } catch (apiError) {
+          console.error('세션 API 호출 오류:', apiError);
+          
+          // API 오류 발생 시 로컬 스토리지의 세션 ID 사용
+          if (localSessionId) {
+            console.log('API 오류, 로컬 스토리지의 세션 ID 사용:', localSessionId);
+            setSessionId(localSessionId);
+          } else {
+            // 온보딩 완료 여부 확인
+            const onboardingCompleted = checkOnboardingCompleted();
+            
+            if (!onboardingCompleted) {
+              console.log('온보딩이 완료되지 않았습니다. 온보딩 페이지로 이동합니다.');
+              router.push('/onboarding');
+              return;
+            }
+            
+            // 세션 ID가 없는 경우, 새 세션 생성
+            console.log('세션 ID가 없어 새 세션 생성 시도');
+            try {
+              // 로컬 스토리지에서 선택된 신체 부위 정보 가져오기
+              let selectedBodyParts = null;
+              try {
+                const userInfoStr = localStorage.getItem('userInfo');
+                if (userInfoStr) {
+                  const userInfo = JSON.parse(userInfoStr);
+                  selectedBodyParts = userInfo.selected_body_parts;
+                }
+              } catch (error) {
+                console.error('사용자 정보 파싱 오류:', error);
+              }
+              
+              // 세션 생성 요청
+              const createResponse = await fetch('/api/v1/sessions', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  body_parts: selectedBodyParts
+                })
+              });
+              
+              if (createResponse.ok) {
+                const createData = await createResponse.json();
+                console.log('새 세션 생성 성공:', createData);
+                setSessionId(createData.session_id);
+                localStorage.setItem('sessionId', createData.session_id);
+              } else {
+                console.error('새 세션 생성 실패:', createResponse.status);
+                
+                // 세션 생성 실패 시 온보딩 페이지로 이동
+                console.log('세션 생성 실패, 온보딩 페이지로 이동합니다.');
+                router.push('/onboarding');
+                return;
+              }
+            } catch (createError) {
+              console.error('세션 생성 오류:', createError);
+              
+              // 오류 발생 시 온보딩 페이지로 이동
+              console.log('세션 생성 중 오류 발생, 온보딩 페이지로 이동합니다.');
+              router.push('/onboarding');
+              return;
+            }
+          }
+          
+          // 로그인 상태 확인
+          const loggedIn = await checkUserLoggedIn();
+          setIsLoggedIn(loggedIn);
         }
         
-        // 세션 ID가 없으면 새로 생성 요청 (비회원 세션)
-        console.log('비회원 세션 생성 요청 중...');
-        const createResponse = await fetch('/api/proxy', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            endpoint: '/api/v1/sessions',
-            method: 'POST',
-            data: {}
-          })
-        });
+        // 세션 초기화 완료
+        setIsInitializing(false);
         
-        if (!createResponse.ok) {
-          throw new Error(`비회원 세션 생성에 실패했습니다. 상태 코드: ${createResponse.status}`);
-        }
-        
-        const createData = await createResponse.json();
-        console.log('비회원 세션 생성 완료:', createData);
-        
-        if (createData && createData.session_id) {
-          setSessionId(createData.session_id);
-        } else {
-          console.error('세션 ID가 응답에 없습니다:', createData);
-          throw new Error('세션 ID를 받지 못했습니다.');
-        }
       } catch (error) {
-        console.error('세션 관리 오류:', error);
-      } finally {
+        console.error('세션 확인 오류:', error);
+        
+        // 오류 발생 시 로컬 스토리지의 세션 ID 사용
+        const localSessionId = localStorage.getItem('sessionId');
+        if (localSessionId) {
+          console.log('오류 발생, 로컬 스토리지의 세션 ID 사용:', localSessionId);
+          setSessionId(localSessionId);
+        }
+        
         setIsInitializing(false);
       }
     };
 
-    fetchCurrentSession();
-  }, []);
+    checkSession();
+  }, [router]);
 
   // 사용자 메시지 전송 처리
   const sendMessageMutation = useMutation({
@@ -131,25 +351,22 @@ export default function ChatUI() {
       const userInfoStr = localStorage.getItem('userInfo');
       const userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
       
-      // 프록시 API를 통해 스트레칭 API 호출
+      // 직접 백엔드 API 호출로 스트레칭 API 요청
       console.log('스트레칭 API 요청 중...');
-      const response = await fetch('/api/proxy', {
+      const response = await fetch(`/api/v1/sessions/${sessionId}/stretching`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          endpoint: `/api/v1/sessions/${sessionId}/stretching`,
-          method: 'POST',
-          data: {
-            pain_description: message, // 사용자 입력을 그대로 전송
-            selected_body_parts: userInfo?.selected_body_parts || '목, 어깨',
-            occupation: userInfo?.job || '직장인',
-            age: parseInt(userInfo?.age) || 30,
-            gender: userInfo?.gender || '여성',
-            lifestyle: userInfo?.dailyRoutine || '주 5일 근무, 하루 8시간 앉아서 일함',
-          }
+          pain_description: message, // 사용자 입력을 그대로 전송
+          selected_body_parts: userInfo?.selected_body_parts || '목, 어깨',
+          occupation: userInfo?.job || '직장인',
+          age: parseInt(userInfo?.age) || 30,
+          gender: userInfo?.gender || '여성',
+          lifestyle: userInfo?.dailyRoutine || '주 5일 근무, 하루 8시간 앉아서 일함',
         }),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -158,30 +375,10 @@ export default function ChatUI() {
       }
 
       const data = await response.json();
-      
-      // 비회원 사용자인 경우 회원가입 유도 알림 표시
-      const isLoggedIn = await checkUserLoggedIn();
-      if (!isLoggedIn) {
-        setTimeout(() => {
-          // 회원가입 유도 알림 표시
-          const signupPromptEvent = new CustomEvent('botMessage', {
-            detail: {
-              id: Date.now() + 100,
-              text: '회원가입하시면 스트레칭 기록을 저장하고 더 많은 기능을 이용하실 수 있습니다. 지금 가입하시겠습니까?',
-              sender: 'bot',
-              isSignupPrompt: true
-            },
-          });
-          window.dispatchEvent(signupPromptEvent);
-        }, 2000); // 2초 후에 회원가입 유도 메시지 표시
-      }
-
       return data;
     },
     onSuccess: (data) => {
       console.log('메시지 전송 성공:', data);
-      console.log('응답 데이터 타입:', typeof data);
-      console.log('응답 데이터 구조:', Object.keys(data));
       
       // 응답 데이터에서 텍스트 추출 (객체인 경우 JSON 문자열로 변환)
       let responseText = '';
@@ -190,21 +387,16 @@ export default function ChatUI() {
         
         // 특정 필드 확인 (stretching_guide 필드를 우선 확인)
         if (data.stretching_guide) {
-          console.log('stretching_guide 필드 발견:', data.stretching_guide);
           responseText = data.stretching_guide;
         } else if (data.text) {
-          console.log('text 필드 발견:', data.text);
           responseText = data.text;
         } else if (data.content) {
-          console.log('content 필드 발견:', data.content);
           responseText = data.content;
         } else if (data.message) {
-          console.log('message 필드 발견:', data.message);
           responseText = data.message;
         } else {
           // 객체를 문자열로 변환하여 표시
           try {
-            console.log('알려진 필드 없음, 전체 객체를 문자열로 변환');
             responseText = JSON.stringify(data, null, 2);
           } catch (e) {
             console.error('객체 변환 오류:', e);
@@ -212,19 +404,18 @@ export default function ChatUI() {
           }
         }
       } else if (typeof data === 'string') {
-        console.log('문자열 데이터:', data.substring(0, 100) + (data.length > 100 ? '...' : ''));
         responseText = data;
       } else {
-        console.log('지원되지 않는 데이터 타입:', typeof data);
         responseText = '응답을 받지 못했습니다.';
       }
       
-      console.log('최종 응답 텍스트:', responseText.substring(0, 100) + (responseText.length > 100 ? '...' : ''));
+      // 봇 응답 메시지 이벤트 발생 - 고유한 ID 생성
+      const uniqueResponseId = Date.now() + Math.floor(Math.random() * 1000);
+      console.log('봇 응답 메시지 ID 생성:', uniqueResponseId);
       
-      // 봇 응답 메시지 이벤트 발생
       const botMessageEvent = new CustomEvent('botMessage', {
         detail: {
-          id: Date.now(),
+          id: uniqueResponseId,
           text: data, // 전체 데이터 객체를 그대로 전달
           sender: 'bot',
         },
@@ -233,6 +424,58 @@ export default function ChatUI() {
       
       // 로딩 상태 해제
       setIsLoading(false);
+      
+      // 비회원 사용자인 경우 회원가입 유도 알림 표시
+      const checkAndShowSignupPrompt = async () => {
+        console.log('회원가입 유도 검사 시작, 현재 메시지 카운트:', messageCount);
+        const isLoggedIn = await checkUserLoggedIn();
+        console.log('로그인 상태 확인 결과:', isLoggedIn);
+        setIsLoggedIn(isLoggedIn); // 로그인 상태 업데이트
+        
+        // 로그인 상태를 다시 확인하고, 로그인되지 않은 경우에만 회원가입 유도 메시지 표시
+        if (!isLoggedIn) {
+          console.log('비로그인 사용자 감지: 회원가입 유도 메시지 표시 예정');
+          
+          // 현재 메시지 카운트 기준으로 판단 (상태 업데이트 후의 값 사용)
+          const currentCount = messageCount + 1; // 방금 증가된 카운트 반영
+          console.log('현재 메시지 카운트:', currentCount);
+          
+          // 첫 번째 또는 두 번째 메시지 후에 회원가입 유도 메시지 표시
+          if (currentCount === 1 || currentCount === 2) {
+            console.log(`메시지 카운트(${currentCount})에 따른 회원가입 유도 메시지 표시 예정`);
+            setTimeout(() => {
+              // 회원가입 유도 알림 표시 전에 로그인 상태 한번 더 확인
+              checkUserLoggedIn().then(finalCheck => {
+                if (!finalCheck) {
+                  console.log('회원가입 유도 메시지 표시');
+                  // 고유한 ID 생성 (충돌 방지)
+                  const signupPromptId = Date.now() + 9999 + Math.floor(Math.random() * 1000);
+                  console.log('회원가입 유도 메시지 ID 생성:', signupPromptId);
+                  
+                  const signupPromptEvent = new CustomEvent('botMessage', {
+                    detail: {
+                      id: signupPromptId,
+                      text: '계정을 만들면 스트레칭 히스토리를 저장하고 개인화된 추천을 받을 수 있다부기! 지금 가입하시겠어부기?',
+                      sender: 'bot',
+                      isSignupPrompt: true,
+                    },
+                  });
+                  window.dispatchEvent(signupPromptEvent);
+                } else {
+                  console.log('최종 확인: 로그인된 사용자, 회원가입 유도 건너뜀');
+                }
+              });
+            }, 2000); // 2초 후에 회원가입 유도 메시지 표시
+          } else {
+            console.log('회원가입 유도 조건 미충족, 현재 카운트:', currentCount);
+          }
+        } else {
+          console.log('로그인된 사용자, 회원가입 유도 건너뜀');
+        }
+      };
+      
+      // 회원가입 유도 메시지 표시 함수 호출
+      checkAndShowSignupPrompt();
     },
     onError: (error) => {
       console.error('메시지 전송 오류:', error);
@@ -242,7 +485,7 @@ export default function ChatUI() {
       
       // 세션 ID 관련 오류인 경우
       if (error instanceof Error && error.message.includes('세션 ID가 없습니다')) {
-        errorMessage = '세션 정보를 찾을 수 없습니다. 페이지를 새로고침 해주세요.';
+        errorMessage = '세션 정보를 찾을 수 없습니다. 온보딩 페이지에서 정보를 입력해주세요.';
       } 
       // 빈 메시지 오류인 경우
       else if (error instanceof Error && error.message.includes('메시지가 비어있습니다')) {
@@ -256,21 +499,15 @@ export default function ChatUI() {
       else if (error instanceof Error && error.message.includes('스트레칭 API 응답 오류')) {
         errorMessage = '서버 연결에 문제가 있습니다. 잠시 후 다시 시도해주세요.';
       }
-      // CORS 오류인 경우
-      else if (error instanceof Error && error.message.includes('CORS')) {
-        errorMessage = '서버 연결에 문제가 있습니다. 관리자에게 문의해주세요.';
-        console.error('CORS 오류 발생:', error.message);
-      }
-      // 네트워크 오류인 경우
-      else if (error instanceof Error && error.message.includes('Failed to fetch')) {
-        errorMessage = '네트워크 연결을 확인해주세요.';
-        console.error('네트워크 오류 발생:', error.message);
-      }
+      
+      // 고유한 ID 생성 (충돌 방지)
+      const errorMessageId = Date.now() + 8888 + Math.floor(Math.random() * 1000);
+      console.log('오류 메시지 ID 생성:', errorMessageId);
       
       // 오류 메시지 이벤트 발생
       const errorMessageEvent = new CustomEvent('botMessage', {
         detail: {
-          id: Date.now(),
+          id: errorMessageId,
           text: errorMessage,
           sender: 'bot',
         },
@@ -282,46 +519,41 @@ export default function ChatUI() {
     },
   });
 
-  const handleSendMessage = (message: string) => {
+  const handleSendMessage = (message: any) => {
     console.log('사용자 메시지 전송:', message);
-    // 사용자 메시지 이벤트 발생
-    const userMessageEvent = new CustomEvent('botMessage', {
-      detail: {
-        id: Date.now(),
-        text: message,
-        sender: 'user',
-      },
-    });
-    window.dispatchEvent(userMessageEvent);
+    
+    // 메시지가 객체인 경우 텍스트만 추출
+    let messageText = message;
+    if (typeof message === 'object' && message !== null) {
+      try {
+        if (message.text) {
+          messageText = message.text;
+        } else if (message.content) {
+          messageText = message.content;
+        } else if (message.message) {
+          messageText = message.message;
+        } else {
+          messageText = JSON.stringify(message);
+        }
+        console.log('객체에서 텍스트 추출:', messageText);
+      } catch (e) {
+        console.error('메시지 객체 처리 오류:', e);
+      }
+    }
     
     // 로딩 상태 설정
     setIsLoading(true);
     
-    // API 요청
-    sendMessageMutation.mutate(message);
+    // 메시지 카운트 증가 (회원가입 유도 목적)
+    setMessageCount(prevCount => prevCount + 1);
+    console.log('메시지 카운트 증가:', messageCount + 1);
+    
+    // 메시지 전송 뮤테이션 호출 - 추출된 텍스트 사용
+    sendMessageMutation.mutate(messageText);
   };
 
-  // 사용자 로그인 상태 확인 함수 추가
-  const checkUserLoggedIn = async () => {
-    try {
-      const response = await fetch('/api/v1/auth/me', {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        return data.is_authenticated && data.user;
-      }
-      return false;
-    } catch (error) {
-      console.error('로그인 상태 확인 중 오류:', error);
-      return false;
-    }
+  const handleGoToOnboarding = () => {
+    router.push('/onboarding');
   };
 
   return (
@@ -336,15 +568,36 @@ export default function ChatUI() {
             <LoadingSpinner initialMessage="세션을 불러오는 중이에요" />
           </div>
         ) : sessionId ? (
-          <ChatInterface 
-            sessionId={sessionId}
-            initialMessages={initialMessages}
-            onSendMessage={handleSendMessage}
-            isLoading={isLoading}
-          />
+          isLoggedIn && !checkOnboardingCompleted() ? (
+            // 로그인은 되어 있지만 온보딩이 완료되지 않은 경우
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+              <p className="text-center text-lg">온보딩이 완료되지 않았습니다. 온보딩 페이지에서 정보를 입력해주세요.</p>
+              <button 
+                onClick={handleGoToOnboarding}
+                className="px-4 py-2 bg-[#93D400] text-white rounded-md hover:bg-[#7eb300] transition-colors"
+              >
+                온보딩 페이지로 이동
+              </button>
+            </div>
+          ) : (
+            // 정상적인 채팅 인터페이스 표시
+            <ChatInterface 
+              sessionId={sessionId}
+              initialMessages={initialMessages}
+              onSendMessage={handleSendMessage}
+              isLoading={isLoading}
+            />
+          )
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <LoadingSpinner initialMessage="세션 정보를 가져오지 못했습니다. 새로고침 해주세요." />
+          // 세션 ID가 없는 경우
+          <div className="flex flex-col items-center justify-center h-full gap-4">
+            <p className="text-center text-lg">세션 정보가 없습니다. 온보딩 페이지에서 정보를 입력해주세요.</p>
+            <button 
+              onClick={handleGoToOnboarding}
+              className="px-4 py-2 bg-[#93D400] text-white rounded-md hover:bg-[#7eb300] transition-colors"
+            >
+              온보딩 페이지로 이동
+            </button>
           </div>
         )}
       </div>
