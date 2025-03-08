@@ -60,7 +60,7 @@ brew services start mongodb-community
 
 1. **저장소 복제**
 ```bash
-git clone https://github.com/yourusername/coach-web.git
+git clone https://github.com/stretching-coach-ai/coach-web.git
 cd coach-web
 ```
 
